@@ -1,13 +1,19 @@
+import osmnx as ox
+import matplotlib.pyplot as plt
+
+# Use the 'Agg' backend for headless environments
 import matplotlib
 matplotlib.use('Agg')
 
-import matplotlib.pyplot as plt
+# Get a street network for a place name
+G = ox.graph_from_place('Piedmont, California, USA', network_type='drive')
 
-# Create a simple plot
-plt.plot([1, 2, 3, 4], [1, 4, 9, 16])
-plt.xlabel('X Axis')
-plt.ylabel('Y Axis')
-plt.title('Simple Plot')
-plt.show()
+# Plot the street network
+fig, ax = ox.plot_graph(G, show=False, close=False)
 
-plt.savefig('plot.png')
+# Save the plot to a file
+fig.savefig('street_network.png', format='png', dpi=300)
+
+# Optionally close the figure to free up memory
+plt.close(fig)
+
