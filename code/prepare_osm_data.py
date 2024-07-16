@@ -20,12 +20,15 @@ def main():
     #Consider only the cities with population more than 100000
     df_city_p = df_city_p[df_city_p['population']>=100000]
 
+    #extract only the city name
 
-    print(df_city_p.info())
+    df_city_p['city'] = df_city_p['city'].str.split(',',expand=True)[0]
+
+    print(df_city_p.head(10))
     # print("Hello")
 
 def get_city_from_df(str):
-    str = str.split(',')
+    str = str.split(',')[0].strip()
 
 if __name__ == '__main__':
     main()
