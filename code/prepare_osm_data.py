@@ -1,4 +1,6 @@
 import pandas as pd
+from geopy.geocoders import Nominatim
+import time
 
 def main():
     #get the city population data
@@ -30,8 +32,42 @@ def main():
     # df_city_p['city'] = df_city_p['city'].apply(decode_value)
     # df_city_p[1] = df_city_p[1].apply(decode_value)
     # df_city_p['city'] = df_city_p['city'].encode('latin1')
-    print(df_city_p.head(10))
+
+    # print(df_city_p.head(10))
     # print("Hello")
+    ########################
+
+
+    # Initialize the geolocator
+    geolocator = Nominatim(user_agent="city_locator")
+
+    # List of cities
+    cities = ["Berlin", "Munich", "Hamburg", "Cologne", "Frankfurt"]
+
+    # Function to get latitude and longitude
+    def get_lat_lon(city):
+        try:
+            location = geolocator.geocode(city + ", Germany")
+            if location:
+                return (location.latitude, location.longitude)
+            else:
+                return None
+        except Exception as e:
+            print(f"Error getting coordinates for {city}: {e}")
+            return None
+
+    # Iterate through the cities and get their coordinates
+    city_coords = {}
+    for city in cities:
+        coords = get_lat_lon(city)
+        if coords:
+            city_coords[city] = coords
+        time.sleep(1)  # To avoid hitting the API rate limit
+
+    # Print the results
+    for city, coords in city_coords.items():
+        print(f"{city}: Latitude = {coords[0]}, Longitude = {coords[1]}")
+
 
 def decode_value(value):
     try:
