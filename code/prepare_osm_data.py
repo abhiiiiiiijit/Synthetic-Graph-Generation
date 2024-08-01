@@ -3,13 +3,43 @@ from geopy.geocoders import Nominatim
 import time
 import osmnx as ox
 import matplotlib.pyplot as plt
+import csv
 
 def main():
     #get the city population data > 100k
     df_city_p = get_cities_w_pop_gt_100k()
 
-    print(df_city_p.shape)
+    # city names list
+    cities = df_city_p['city'].to_list()
 
+    #lat_long Written in csv file now just need to read it
+    # write_lat_long(cities)
+    pd.set_option('display.float_format', '{:.10f}'.format)
+    lat_long = pd.read_csv('./data/lat_long.csv',delimiter=','
+                            ,encoding='utf-8',header=None)
+
+    print(lat_long.shape)
+# takes lot of time to get the lat_long so I have written down a csv file
+def write_lat_long(cities):
+    lat_long = get_lat_long(cities)
+    file_path = './data/lat_long.csv'
+    with open(file_path, mode='w', newline='') as file:
+        writer = csv.writer(file)
+        writer.writerows(lat_long)
+
+def get_lat_long(cities):
+    geolocator = Nominatim(user_agent="city_locator")
+    cities_w_ll = []
+    for city in cities:
+        try:
+            location = geolocator.geocode(city + ", Germany")
+            # print(location)
+            if location:
+                cities_w_ll.append((location.latitude, location.longitude)) 
+        except Exception as e:
+            print(f"Error getting coordinates for {city}: {e}")
+            # return None
+    return cities_w_ll
 
 def get_cities_w_pop_gt_100k():
     df_city_p = pd.read_csv('./data/Germany_cities_pop.csv',delimiter=';'
