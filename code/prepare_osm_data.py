@@ -4,56 +4,16 @@ import time
 import osmnx as ox
 import matplotlib.pyplot as plt
 
-import torch
-from torch_geometric.data import Data
-
-def generate_dataset(num_nodes, features_dim, edge_prob, max_distance):
-  """
-  Generates a sample GNN dataset with embedded edge distance and location.
-
-  Args:
-      num_nodes: Number of nodes in the graph.
-      features_dim: Dimensionality of node features.
-      edge_prob: Probability of an edge existing between two nodes.
-      max_distance: Maximum distance used for edge distance embedding.
-
-  Returns:
-      A PyTorch Geometric Data object representing the graph.
-  """
-  # Generate random node features
-  node_features = torch.randn(num_nodes, features_dim)
-
-  # Create empty edge lists and edge attributes
-  edge_index = []
-  edge_attr = []
-
-  # Generate random edges with probability and calculate distances
-  for i in range(num_nodes):
-    for j in range(i + 1, num_nodes):
-      if torch.rand(1) < edge_prob:
-        # Calculate random distance between nodes (0 to max_distance)
-        distance = torch.rand(1) * max_distance
-        edge_index.append([i, j])
-        edge_attr.append([distance])
-    # Convert edge lists and attributes to tensors
-  edge_index = torch.tensor(edge_index, dtype=torch.long).t()
-  edge_attr = torch.tensor(edge_attr, dtype=torch.float)
-
-  # Generate random node locations (optional, can be replaced with actual data)
-  node_locations = torch.randn(num_nodes, 2)  # 2D location for example
-
-  # Combine edge distance and node locations into a single edge attribute
-  combined_edge_attr = torch.cat((edge_attr, node_locations[edge_index[1]] - node_locations[edge_index[0]]), dim=1)
-
-  # Create Data object with features, edge indices, and edge attributes
-  data = Data(x=node_features, edge_index=edge_index, edge_attr=combined_edge_attr)
-  return data  
-
 def main():
-    #get the city population data
+    #get the city population data > 100k
+    df_city_p = get_cities_w_pop_gt_100k()
 
-    df_city_p = pd.read_csv('./data/city_population.csv',delimiter=';'
-                            ,encoding='utf-8',header=None)
+    print(df_city_p.shape)
+
+
+def get_cities_w_pop_gt_100k():
+    df_city_p = pd.read_csv('./data/Germany_cities_pop.csv',delimiter=';'
+                            ,encoding='ISO-8859-1',header=None)
     
     #drop other columns, only take the 2023 data
     df_city_p = df_city_p.drop(columns=[0,2,3,4,5])
@@ -63,6 +23,9 @@ def main():
 
     df_city_p.rename(columns=col_name,inplace=True)
 
+    #remove - from population column
+    df_city_p = df_city_p[df_city_p['population']!='-']
+
     # change data type of population to int
     df_city_p['population'] = df_city_p['population'].astype('Int64')
 
@@ -70,13 +33,71 @@ def main():
     df_city_p = df_city_p[df_city_p['population']>=100000]
 
     # extract only the city name
-    # df_city_p['city'] = df_city_p['city'].apply(lambda x: get_city_from_df(x, ',', 0))
     df_city_p['city'] = df_city_p['city'].str.split(',',expand=True)[0]
-    # df_city_p['city'] = df_city_p['city'].apply(decode_value)
-    # df_city_p[1] = df_city_p[1].apply(decode_value)
-    # df_city_p['city'] = df_city_p['city'].encode('latin1')
 
-    print(df_city_p.head(10))
+    return df_city_p
+
+
+if __name__ == '__main__':
+    main()
+
+
+
+
+
+
+
+
+
+
+
+
+# import torch
+# from torch_geometric.data import Data
+
+# def generate_dataset(num_nodes, features_dim, edge_prob, max_distance):
+#   """
+#   Generates a sample GNN dataset with embedded edge distance and location.
+
+#   Args:
+#       num_nodes: Number of nodes in the graph.
+#       features_dim: Dimensionality of node features.
+#       edge_prob: Probability of an edge existing between two nodes.
+#       max_distance: Maximum distance used for edge distance embedding.
+
+#   Returns:
+#       A PyTorch Geometric Data object representing the graph.
+#   """
+#   # Generate random node features
+#   node_features = torch.randn(num_nodes, features_dim)
+
+#   # Create empty edge lists and edge attributes
+#   edge_index = []
+#   edge_attr = []
+
+#   # Generate random edges with probability and calculate distances
+#   for i in range(num_nodes):
+#     for j in range(i + 1, num_nodes):
+#       if torch.rand(1) < edge_prob:
+#         # Calculate random distance between nodes (0 to max_distance)
+#         distance = torch.rand(1) * max_distance
+#         edge_index.append([i, j])
+#         edge_attr.append([distance])
+#     # Convert edge lists and attributes to tensors
+#   edge_index = torch.tensor(edge_index, dtype=torch.long).t()
+#   edge_attr = torch.tensor(edge_attr, dtype=torch.float)
+
+#   # Generate random node locations (optional, can be replaced with actual data)
+#   node_locations = torch.randn(num_nodes, 2)  # 2D location for example
+
+#   # Combine edge distance and node locations into a single edge attribute
+#   combined_edge_attr = torch.cat((edge_attr, node_locations[edge_index[1]] - node_locations[edge_index[0]]), dim=1)
+
+#   # Create Data object with features, edge indices, and edge attributes
+#   data = Data(x=node_features, edge_index=edge_index, edge_attr=combined_edge_attr)
+#   return data  
+
+
     # print("Hello")
     ########################
 
@@ -128,19 +149,17 @@ def main():
     # print(f"Dataset 2: Nodes: {dataset2.num_nodes}, Edges: {dataset2.num_edges}")
     # print(dataset1)
 
-def decode_value(value):
-    try:
-        return value.encode('utf-8').decode('utf-8')
-    except (UnicodeEncodeError, UnicodeDecodeError):
-        return value
+# def decode_value(value):
+#     try:
+#         return value.encode('utf-8').decode('utf-8')
+#     except (UnicodeEncodeError, UnicodeDecodeError):
+#         return value
 
-def get_city_from_df(value, delimiter, part_index):
-    try:
-        parts = value.split(delimiter)
-        return parts[part_index].strip() if len(parts) > part_index else None
-    except Exception as e:
-        print(f"Error processing value '{value}': {e}")
-        return None
+# def get_city_from_df(value, delimiter, part_index):
+#     try:
+#         parts = value.split(delimiter)
+#         return parts[part_index].strip() if len(parts) > part_index else None
+#     except Exception as e:
+#         print(f"Error processing value '{value}': {e}")
+#         return None
 
-if __name__ == '__main__':
-    main()
