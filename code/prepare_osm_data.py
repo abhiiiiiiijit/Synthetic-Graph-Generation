@@ -76,7 +76,7 @@ def main():
     # df_city_p[1] = df_city_p[1].apply(decode_value)
     # df_city_p['city'] = df_city_p['city'].encode('latin1')
 
-    # print(df_city_p.head(10))
+    print(df_city_p.head(10))
     # print("Hello")
     ########################
 
