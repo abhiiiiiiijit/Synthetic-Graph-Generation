@@ -63,10 +63,6 @@ def main():
 
     df_city_p.rename(columns=col_name,inplace=True)
 
-
-
-
-
     # change data type of population to int
     df_city_p['population'] = df_city_p['population'].astype('Int64')
 
@@ -112,8 +108,8 @@ def main():
         time.sleep(1)  # To avoid hitting the API rate limit
 
     # Print the results
-    for city, coords in city_coords.items():
-        print(f"{city}: Latitude = {coords[0]}, Longitude = {coords[1]}")
+    # for city, coords in city_coords.items():
+    #     print(f"{city}: Latitude = {coords[0]}, Longitude = {coords[1]}")
 
 
 
@@ -128,7 +124,7 @@ def main():
     dataset2 = generate_dataset(num_nodes=100, features_dim=16, edge_prob=0.5, max_distance=20)
 
     # Print information about the datasets
-    print(f"Dataset 1: Nodes: {dataset1.num_nodes}, Edges: {dataset1.num_edges}")
+    # print(f"Dataset 1: Nodes: {dataset1.num_nodes}, Edges: {dataset1.num_edges}")
     # print(f"Dataset 2: Nodes: {dataset2.num_nodes}, Edges: {dataset2.num_edges}")
     # print(dataset1)
 
