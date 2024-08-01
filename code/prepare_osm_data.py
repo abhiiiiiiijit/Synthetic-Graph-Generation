@@ -81,47 +81,47 @@ def main():
     ########################
 
 
-    # Initialize the geolocator
-    geolocator = Nominatim(user_agent="city_locator")
+    # # Initialize the geolocator
+    # geolocator = Nominatim(user_agent="city_locator")
 
-    # List of cities
-    cities = ["Berlin", "Munich", "Hamburg", "Cologne", "Frankfurt"]
+    # # List of cities
+    # cities = ["Berlin", "Munich", "Hamburg", "Cologne", "Frankfurt"]
 
-    # Function to get latitude and longitude
-    def get_lat_lon(city):
-        try:
-            location = geolocator.geocode(city + ", Germany")
-            if location:
-                return (location.latitude, location.longitude)
-            else:
-                return None
-        except Exception as e:
-            print(f"Error getting coordinates for {city}: {e}")
-            return None
+    # # Function to get latitude and longitude
+    # def get_lat_lon(city):
+    #     try:
+    #         location = geolocator.geocode(city + ", Germany")
+    #         if location:
+    #             return (location.latitude, location.longitude)
+    #         else:
+    #             return None
+    #     except Exception as e:
+    #         print(f"Error getting coordinates for {city}: {e}")
+    #         return None
 
-    # Iterate through the cities and get their coordinates
-    city_coords = {}
-    for city in cities:
-        coords = get_lat_lon(city)
-        if coords:
-            city_coords[city] = coords
-        time.sleep(1)  # To avoid hitting the API rate limit
+    # # Iterate through the cities and get their coordinates
+    # city_coords = {}
+    # for city in cities:
+    #     coords = get_lat_lon(city)
+    #     if coords:
+    #         city_coords[city] = coords
+    #     time.sleep(1)  # To avoid hitting the API rate limit
 
-    # Print the results
-    # for city, coords in city_coords.items():
-    #     print(f"{city}: Latitude = {coords[0]}, Longitude = {coords[1]}")
+    # # Print the results
+    # # for city, coords in city_coords.items():
+    # #     print(f"{city}: Latitude = {coords[0]}, Longitude = {coords[1]}")
 
 
 
-    # Define the place name
-    place_name = "Trier, Germany"
+    # # Define the place name
+    # place_name = "Trier, Germany"
 
-    # Fetch the street network for Düsseldorf
-    G = ox.graph_from_place(place_name, network_type='drive')
+    # # Fetch the street network for Düsseldorf
+    # G = ox.graph_from_place(place_name, network_type='drive')
 
     
-    dataset1 = generate_dataset(num_nodes=50, features_dim=10, edge_prob=0.3, max_distance=10)
-    dataset2 = generate_dataset(num_nodes=100, features_dim=16, edge_prob=0.5, max_distance=20)
+    # dataset1 = generate_dataset(num_nodes=50, features_dim=10, edge_prob=0.3, max_distance=10)
+    # dataset2 = generate_dataset(num_nodes=100, features_dim=16, edge_prob=0.5, max_distance=20)
 
     # Print information about the datasets
     # print(f"Dataset 1: Nodes: {dataset1.num_nodes}, Edges: {dataset1.num_edges}")
