@@ -2,7 +2,6 @@
 prepare_osm:
 	python ./code/prepare_osm_data.py
 
-
 .PHONY: example
 example:
 	python ./code/example.py
@@ -19,3 +18,15 @@ init:
 .PHONY: test
 test:
 	@echo "Running tests..."
+
+.PHONY: avenv
+avenv:
+	D:\Git\env\Scripts\Activate.ps1
+
+.PHONY: dvenv
+dvenv:
+	deactivate
+
+.PHONY: cvenv
+cvenv:
+	python -m venv env
