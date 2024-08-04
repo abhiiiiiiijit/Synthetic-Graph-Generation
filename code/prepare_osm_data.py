@@ -23,31 +23,49 @@ def main():
     lat_long = pd.read_csv('./data/lat_long.csv',delimiter=','
                             ,encoding='utf-8',header=None)
 
-    # print(torch.__version__)
-    # print(torch.cuda.is_available())
+    #lets get pyg_data
     pyg_data = get_pyg_data_from_coords(51.2277, 6.7735)
     # print(lat_long)
-    print(pyg_data)
+    # print(pyg_data.nodes())
+
+    # for node in pyg_data.nodes(data=True):
+    #     print(f"Node: {node[1]}")
+    #     for key, value in node[1].items():
+    #         print(f"  {key}: {value}")
+    #         print()
 
 def get_pyg_data_from_coords(lat, lon, distance=500):
     # 1. Obtain the graph from OpenStreetMap
     G = ox.graph_from_point((lat, lon), dist=distance, network_type='drive')
     
+    for node in G.nodes():
+        node_data = G.nodes[node]
+        for key in list(node_data.keys()):
+            if key not in ['x', 'y']:
+                del node_data[key]
+
+    for u, v in G.edges():
+        # print(G.edges)
+        G.edges[(u,v,0)].clear()
+
+    # print(G.edges[(26815185, 28805947, 0)])
+    # print(G.nodes(data=True))
+
     # 2. Extract node and edge information
     # Clean the graph
-    G = ox.utils_graph.remove_isolated_nodes(G)
-    G = ox.utils_graph.get_largest_component(G, strongly=True)
+    # G = ox.utils_graph.remove_isolated_nodes(G)
+    # G = ox.utils_graph.get_largest_component(G, strongly=True)
 
     # 3. Convert NetworkX graph to PyTorch Geometric data object
     pyg_data = from_networkx(G)
-
-    # Adding node features (optional)
-    # Example: Adding latitude and longitude as node features
-    coords = [G.nodes[n]['y'] for n in G.nodes], [G.nodes[n]['x'] for n in G.nodes]
-    coords_tensor = torch.tensor(list(zip(*coords)), dtype=torch.float)
-    pyg_data.x = coords_tensor
+    print(pyg_data.y)
+    # # Adding node features (optional)
+    # # Example: Adding latitude and longitude as node features
+    # coords = [G.nodes[n]['y'] for n in G.nodes], [G.nodes[n]['x'] for n in G.nodes]
+    # coords_tensor = torch.tensor(list(zip(*coords)), dtype=torch.float)
+    # pyg_data.x = coords_tensor
     
-    return pyg_data
+    return G
 
 
 
