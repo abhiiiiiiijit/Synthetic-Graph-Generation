@@ -5,7 +5,9 @@ import osmnx as ox
 import matplotlib.pyplot as plt
 import csv
 import networkx as nx
-# import torch
+import torch
+from torch_geometric.data import Data
+from torch_geometric.utils import from_networkx
 # cd 
 
 def main():
@@ -23,46 +25,46 @@ def main():
 
     # print(torch.__version__)
     # print(torch.cuda.is_available())
-    # pyg_data = get_osm_map_1km(51.2277, 6.7735)
-    print(lat_long)
-    # print(pyg_data)
+    pyg_data = get_pyg_data_from_coords(51.2277, 6.7735)
+    # print(lat_long)
+    print(pyg_data)
 
-# def get_pyg_data_from_coords(lat, lon, distance=500):
-#     # 1. Obtain the graph from OpenStreetMap
-#     G = ox.graph_from_point((lat, lon), dist=distance, network_type='drive')
+def get_pyg_data_from_coords(lat, lon, distance=500):
+    # 1. Obtain the graph from OpenStreetMap
+    G = ox.graph_from_point((lat, lon), dist=distance, network_type='drive')
     
-#     # 2. Extract node and edge information
-#     # Clean the graph
-#     G = ox.utils_graph.remove_isolated_nodes(G)
-#     G = ox.utils_graph.get_largest_component(G, strongly=True)
+    # 2. Extract node and edge information
+    # Clean the graph
+    G = ox.utils_graph.remove_isolated_nodes(G)
+    G = ox.utils_graph.get_largest_component(G, strongly=True)
 
-#     # 3. Convert NetworkX graph to PyTorch Geometric data object
-#     pyg_data = from_networkx(G)
+    # 3. Convert NetworkX graph to PyTorch Geometric data object
+    pyg_data = from_networkx(G)
 
-#     # Adding node features (optional)
-#     # Example: Adding latitude and longitude as node features
-#     coords = [G.nodes[n]['y'] for n in G.nodes], [G.nodes[n]['x'] for n in G.nodes]
-#     coords_tensor = torch.tensor(list(zip(*coords)), dtype=torch.float)
-#     pyg_data.x = coords_tensor
+    # Adding node features (optional)
+    # Example: Adding latitude and longitude as node features
+    coords = [G.nodes[n]['y'] for n in G.nodes], [G.nodes[n]['x'] for n in G.nodes]
+    coords_tensor = torch.tensor(list(zip(*coords)), dtype=torch.float)
+    pyg_data.x = coords_tensor
     
-#     return pyg_data
+    return pyg_data
 
 
 
 
 
-def get_osm_map_1km(lat, long):
-    # Define the central point and distance around it (in meters)
-    center_point = (lat, long)  # Latitude and longitude of Düsseldorf city center
-    distance = 1000  # Distance in meters
+# def get_osm_map_1km(lat, long):
+#     # Define the central point and distance around it (in meters)
+#     center_point = (lat, long)  # Latitude and longitude of Düsseldorf city center
+#     distance = 1000  # Distance in meters
 
-    # Fetch the street network within the distance from the center point
-    G = ox.graph.graph_from_point(center_point, dist=distance, network_type='drive')
+#     # Fetch the street network within the distance from the center point
+#     G = ox.graph.graph_from_point(center_point, dist=distance, network_type='drive')
 
-    # Plot the street network
-    fig, ax = ox.plot.plot_graph(G)
-    plt.title('Street Network within 1km of Düsseldorf City Center')
-    plt.show()
+#     # Plot the street network
+#     fig, ax = ox.plot.plot_graph(G)
+#     plt.title('Street Network within 1km of Düsseldorf City Center')
+#     plt.show()
 
 
 
