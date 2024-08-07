@@ -20,7 +20,7 @@ def main():
     #lat_long Written in csv file now just need to read it
     # write_lat_long(cities)
     pd.set_option('display.float_format', '{:.5f}'.format)
-    lat_long = pd.read_csv('./data/lat_long.csv',delimiter=','
+    lat_long = pd.read_csv('./data/city_lat_long.csv',delimiter=','
                             ,encoding='utf-8',header=None)
 
     #lets get pyg_data
@@ -38,15 +38,68 @@ def get_pyg_data_from_coords(lat, lon, distance=500):
     # 1. Obtain the graph from OpenStreetMap
     G = ox.graph_from_point((lat, lon), dist=distance, network_type='drive')
     
+    # Required keys
+    # required_keys = ['x', 'y']
+
+    # Filter nodes and update features
+    nodes_to_remove = []
+
+
     for node in G.nodes():
         node_data = G.nodes[node]
-        for key in list(node_data.keys()):
-            if key not in ['x', 'y']:
-                del node_data[key]
+        if 'x' in list(node_data.keys()) and 'y' in list(node_data.keys()):
+            # xy_not_none = node_data['x'] is  None or node_data['y'] is  None
+            # xy_not_0 = node_data['x'] == 0 or node_data['y'] == 0
+            if not (bool(node_data['x']) or bool(node_data['y'])):
+                nodes_to_remove.append(node)
+            else:
+                G.nodes[node]['x'] = [ node_data['x'],node_data['y']]
+                for key in list(node_data.keys()):
+                    if key != 'x':
+                        del node_data[key]
+                # node_data = {'lat_long' : [node_data['x'],node_data['y']]}
 
+        elif 'x' not in list(node_data.keys()) or 'y' not in list(node_data.keys()):
+            nodes_to_remove.append(node)
+    # print(nodes_to_remove)
+    G.remove_nodes_from(nodes_to_remove)
+
+        # for key in list(node_data.keys()):
+        #     if key not in ['x','y']:
+        #         del node_data[key]
+
+    # attr_x = nx.get_node_attributes(G, 'x')
+    # attr_y = nx.get_node_attributes(G, 'y')
+    # attr = { k:{"x":[v,attr_y[k]]} for k,v in attr_x.items()}
+    # nx.set_node_attributes(G, attr)
     for u, v in G.edges():
         # print(G.edges)
         G.edges[(u,v,0)].clear()
+
+    pyg_data = from_networkx(G)
+    print(pyg_data.edge_index)
+
+    return G
+    # print(attr)
+    # for node, data in G.nodes(data=True):
+    #     lat_long = nx.get_node_attributes(node,'x')
+    #     # nb = nx.get_node_attributes(G,'x')
+    #     print(lat_long)
+        # print(node)
+        # if all(key in features for key in required_keys):
+        #     updated_features.append([features[key] for key in required_keys])
+        # else:
+        #     nodes_to_remove.append(node)
+    # print(nx.is_directed(G))
+    # print(G.nodes(data=True))
+    # 3. Convert NetworkX graph to PyTorch Geometric data object
+    # pyg_data = from_networkx(G)
+    # print(pyg_data.y)
+
+
+    # for u, v in G.edges():
+    #     # print(G.edges)
+    #     G.edges[(u,v,0)].clear()
 
     # print(G.edges[(26815185, 28805947, 0)])
     # print(G.nodes(data=True))
@@ -57,15 +110,14 @@ def get_pyg_data_from_coords(lat, lon, distance=500):
     # G = ox.utils_graph.get_largest_component(G, strongly=True)
 
     # 3. Convert NetworkX graph to PyTorch Geometric data object
-    pyg_data = from_networkx(G)
-    print(pyg_data.y)
+
     # # Adding node features (optional)
     # # Example: Adding latitude and longitude as node features
     # coords = [G.nodes[n]['y'] for n in G.nodes], [G.nodes[n]['x'] for n in G.nodes]
     # coords_tensor = torch.tensor(list(zip(*coords)), dtype=torch.float)
     # pyg_data.x = coords_tensor
     
-    return G
+
 
 
 
@@ -89,7 +141,7 @@ def get_pyg_data_from_coords(lat, lon, distance=500):
 # takes lot of time to get the lat_long so I have written down a csv file
 def write_lat_long(cities):
     lat_long = get_lat_long(cities)
-    file_path = './data/lat_long.csv'
+    file_path = './data/city_lat_long.csv'
     with open(file_path, mode='w', newline='') as file:
         writer = csv.writer(file)
         writer.writerows(lat_long)

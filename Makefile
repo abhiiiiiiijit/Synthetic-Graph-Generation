@@ -17,7 +17,7 @@ init:
 
 .PHONY: test
 test:
-	@echo "Running tests..."
+	python ./code/test.py
 
 .PHONY: avenv
 avenv:
