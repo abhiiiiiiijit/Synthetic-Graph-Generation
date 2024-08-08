@@ -53,11 +53,11 @@ import pickle
 # with open("./data/networkx_cities_graph/graphs.pkl", "wb") as f:
 #     pickle.dump(graphs, f)
 
-with open("./data/networkx_cities_graph/graphs.pkl", "rb") as f:
+with open("./data/networkx_cities_graph/cities_graphs.pkl", "rb") as f:
     loaded_graphs = pickle.load(f)
 
 # Now you can use the loaded graphs
-G1_loaded = loaded_graphs[0]
-G2_loaded = loaded_graphs[1]
+# G1_loaded = loaded_graphs[0]
+# G2_loaded = loaded_graphs[1]
 
-print(G1_loaded)
+print(len(loaded_graphs))

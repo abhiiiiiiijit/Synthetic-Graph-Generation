@@ -26,11 +26,15 @@ def main():
 
 
     #lets get network x data for all the graphs in a list
-    file_path = './data/city_lat_long.csv'
-    l_netx_cities = get_networkx_data_from_coords(file_path)
+    # file_path = './data/city_lat_long.csv'
+    # l_netx_cities = get_networkx_data_from_coords(file_path)
+    with open("./data/networkx_cities_graph/cities_graphs.pkl", "rb") as f:
+        l_netx_cities = pickle.load(f)
 
-    with open("./data/networkx_cities_graph/cities_graphs.pkl", "wb") as f:
-        pickle.dump(l_netx_cities, f)
+    print(len(l_netx_cities))
+
+    # with open("./data/networkx_cities_graph/cities_graphs.pkl", "wb") as f:
+    #     pickle.dump(l_netx_cities, f)
     # print(len(l_netx_cities))
     #
 
@@ -98,6 +102,10 @@ def get_networkx_data_from_coords(file_path, distance=500):
         
 
     return l_netx_cities
+    # with open("./data/networkx_cities_graph/cities_graphs.pkl", "wb") as f:
+    #     pickle.dump(l_netx_cities, f)
+
+#################################################
     # attr_x = nx.get_node_attributes(G, 'x')
     # attr_y = nx.get_node_attributes(G, 'y')
     # attr = { k:{"x":[v,attr_y[k]]} for k,v in attr_x.items()}
