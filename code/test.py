@@ -25,5 +25,39 @@
 # print("Updated Node Features:\n", data.x)
 # print("Edge Index:\n", data.edge_index)
 
+# import csv
 
-print(bool(1))
+# # Open the CSV file
+# with open('./data/city_lat_long.csv', mode='r') as file:
+#     # Create a CSV reader object
+#     csv_reader = csv.reader(file)
+    
+#     # print(type(csv_reader))
+#     # # Iterate over each row in the CSV file
+#     for row in csv_reader:
+#         print(type(row))
+
+import networkx as nx
+import pickle
+
+# # Example: Creating a list of graphs
+# G1 = nx.Graph()
+# G1.add_edges_from([(1, 2), (2, 3)])
+
+# G2 = nx.Graph()
+# G2.add_edges_from([(3, 4), (4, 5)])
+
+# graphs = [G1, G2]
+
+# # Save the list of graphs to a file
+# with open("./data/networkx_cities_graph/graphs.pkl", "wb") as f:
+#     pickle.dump(graphs, f)
+
+with open("./data/networkx_cities_graph/graphs.pkl", "rb") as f:
+    loaded_graphs = pickle.load(f)
+
+# Now you can use the loaded graphs
+G1_loaded = loaded_graphs[0]
+G2_loaded = loaded_graphs[1]
+
+print(G1_loaded)

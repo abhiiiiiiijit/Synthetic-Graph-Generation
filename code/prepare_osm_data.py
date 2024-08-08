@@ -8,6 +8,7 @@ import networkx as nx
 import torch
 from torch_geometric.data import Data
 from torch_geometric.utils import from_networkx
+import pickle
 # cd 
 
 def main():
@@ -19,12 +20,20 @@ def main():
 
     #lat_long Written in csv file now just need to read it
     # write_lat_long(cities)
-    pd.set_option('display.float_format', '{:.5f}'.format)
-    lat_long = pd.read_csv('./data/city_lat_long.csv',delimiter=','
-                            ,encoding='utf-8',header=None)
+    # pd.set_option('display.float_format', '{:.5f}'.format)
+    # lat_long = pd.read_csv('./data/city_lat_long.csv',delimiter=','
+    #                         ,encoding='utf-8',header=None)
 
-    #lets get pyg_data
-    pyg_data = get_pyg_data_from_coords(51.2277, 6.7735)
+
+    #lets get network x data for all the graphs in a list
+    file_path = './data/city_lat_long.csv'
+    l_netx_cities = get_networkx_data_from_coords(file_path)
+
+    with open("./data/networkx_cities_graph/cities_graphs.pkl", "wb") as f:
+        pickle.dump(l_netx_cities, f)
+    # print(len(l_netx_cities))
+    #
+
     # print(lat_long)
     # print(pyg_data.nodes())
 
@@ -34,52 +43,65 @@ def main():
     #         print(f"  {key}: {value}")
     #         print()
 
-def get_pyg_data_from_coords(lat, lon, distance=500):
-    # 1. Obtain the graph from OpenStreetMap
-    G = ox.graph_from_point((lat, lon), dist=distance, network_type='drive')
-    
-    # Required keys
-    # required_keys = ['x', 'y']
+def get_networkx_data_from_coords(file_path, distance=500):
+    l_netx_cities = []
+    l_city_coord = []
+    try:
+            
+        with open(file_path, mode='r') as file:
+            cities_lat_long = csv.reader(file)
+            for city in cities_lat_long:
+                l_city_coord.append(city)
+        for city in l_city_coord:
+            try:
+                lat, long, distance = round(float(city[0]), 5), round(float(city[1]), 5), distance
+            # 1. Obtain the graph from OpenStreetMap
 
-    # Filter nodes and update features
-    nodes_to_remove = []
+                G = ox.graph_from_point((lat, long), dist=distance, network_type='drive')
+            except Exception:
+                continue
 
+            # Filter nodes and update features
+            nodes_to_remove = []
 
-    for node in G.nodes():
-        node_data = G.nodes[node]
-        if 'x' in list(node_data.keys()) and 'y' in list(node_data.keys()):
-            # xy_not_none = node_data['x'] is  None or node_data['y'] is  None
-            # xy_not_0 = node_data['x'] == 0 or node_data['y'] == 0
-            if not (bool(node_data['x']) or bool(node_data['y'])):
-                nodes_to_remove.append(node)
-            else:
-                G.nodes[node]['x'] = [ node_data['x'],node_data['y']]
-                for key in list(node_data.keys()):
-                    if key != 'x':
-                        del node_data[key]
-                # node_data = {'lat_long' : [node_data['x'],node_data['y']]}
+            #convert the lat and longitude of the nodes as vector
+            for node in G.nodes():
+                node_data = G.nodes[node]
+                if 'x' in list(node_data.keys()) and 'y' in list(node_data.keys()):
+                    # xy_not_none = node_data['x'] is  None or node_data['y'] is  None
+                    # xy_not_0 = node_data['x'] == 0 or node_data['y'] == 0
+                    if not (bool(node_data['x']) or bool(node_data['y'])):
+                        nodes_to_remove.append(node)
+                    else:
+                        G.nodes[node]['x'] = [ node_data['x'],node_data['y']]
+                        for key in list(node_data.keys()):
+                            if key != 'x':
+                                del node_data[key]
+                        # node_data = {'lat_long' : [node_data['x'],node_data['y']]}
 
-        elif 'x' not in list(node_data.keys()) or 'y' not in list(node_data.keys()):
-            nodes_to_remove.append(node)
-    # print(nodes_to_remove)
-    G.remove_nodes_from(nodes_to_remove)
+                elif 'x' not in list(node_data.keys()) or 'y' not in list(node_data.keys()):
+                    nodes_to_remove.append(node)
+            # print(nodes_to_remove)
+            G.remove_nodes_from(nodes_to_remove)
 
-        # for key in list(node_data.keys()):
-        #     if key not in ['x','y']:
-        #         del node_data[key]
+            # clear edge features
+            for u, v in G.edges():
+                # print(G.edges)
+                G.edges[(u,v,0)].clear()
+            l_netx_cities.append(G)
+            # print(G.edges)
 
+            # pyg_data = from_networkx(G)
+            # print(pyg_data.x)
+    except Exception as e:
+        print(f"An unexpected error occurred: {e}")
+        
+
+    return l_netx_cities
     # attr_x = nx.get_node_attributes(G, 'x')
     # attr_y = nx.get_node_attributes(G, 'y')
     # attr = { k:{"x":[v,attr_y[k]]} for k,v in attr_x.items()}
     # nx.set_node_attributes(G, attr)
-    for u, v in G.edges():
-        # print(G.edges)
-        G.edges[(u,v,0)].clear()
-
-    pyg_data = from_networkx(G)
-    print(pyg_data.edge_index)
-
-    return G
     # print(attr)
     # for node, data in G.nodes(data=True):
     #     lat_long = nx.get_node_attributes(node,'x')
