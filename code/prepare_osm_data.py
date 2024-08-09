@@ -18,13 +18,6 @@ def main():
     # city names list
     cities = df_city_p['city'].to_list()
 
-    #lat_long Written in csv file now just need to read it
-    # write_lat_long(cities)
-    # pd.set_option('display.float_format', '{:.5f}'.format)
-    # lat_long = pd.read_csv('./data/city_lat_long.csv',delimiter=','
-    #                         ,encoding='utf-8',header=None)
-
-
     #lets get network x data for all the graphs in a list
     # file_path = './data/city_lat_long.csv'
     # l_netx_cities = get_networkx_data_from_coords(file_path)
@@ -33,19 +26,6 @@ def main():
 
     print(len(l_netx_cities))
 
-    # with open("./data/networkx_cities_graph/cities_graphs.pkl", "wb") as f:
-    #     pickle.dump(l_netx_cities, f)
-    # print(len(l_netx_cities))
-    #
-
-    # print(lat_long)
-    # print(pyg_data.nodes())
-
-    # for node in pyg_data.nodes(data=True):
-    #     print(f"Node: {node[1]}")
-    #     for key, value in node[1].items():
-    #         print(f"  {key}: {value}")
-    #         print()
 
 def get_networkx_data_from_coords(file_path, distance=500):
     l_netx_cities = []
@@ -106,6 +86,20 @@ def get_networkx_data_from_coords(file_path, distance=500):
     #     pickle.dump(l_netx_cities, f)
 
 #################################################
+
+    # with open("./data/networkx_cities_graph/cities_graphs.pkl", "wb") as f:
+    #     pickle.dump(l_netx_cities, f)
+    # print(len(l_netx_cities))
+    #
+
+    # print(lat_long)
+    # print(pyg_data.nodes())
+
+    # for node in pyg_data.nodes(data=True):
+    #     print(f"Node: {node[1]}")
+    #     for key, value in node[1].items():
+    #         print(f"  {key}: {value}")
+    #         print()
     # attr_x = nx.get_node_attributes(G, 'x')
     # attr_y = nx.get_node_attributes(G, 'y')
     # attr = { k:{"x":[v,attr_y[k]]} for k,v in attr_x.items()}
