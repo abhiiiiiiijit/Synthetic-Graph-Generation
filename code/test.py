@@ -53,11 +53,65 @@ import pickle
 # with open("./data/networkx_cities_graph/graphs.pkl", "wb") as f:
 #     pickle.dump(graphs, f)
 
-with open("./data/networkx_cities_graph/cities_graphs.pkl", "rb") as f:
-    loaded_graphs = pickle.load(f)
+# with open("./data/networkx_cities_graph/cities_graphs.pkl", "rb") as f:
+#     loaded_graphs = pickle.load(f)
 
-# Now you can use the loaded graphs
-# G1_loaded = loaded_graphs[0]
-# G2_loaded = loaded_graphs[1]
+# # Now you can use the loaded graphs
+# # G1_loaded = loaded_graphs[0]
+# # G2_loaded = loaded_graphs[1]
 
-print(len(loaded_graphs))
+# print(len(loaded_graphs))
+# import osmnx as ox
+# from pyproj import Proj, transform
+# # Define the latitude, longitude, and distance (in meters)
+# lat, lon = 52.5200, 13.4050  # Example coordinates (Berlin, Germany)
+# distance = 500  # 500 meters
+
+# # Get the graph for the given location
+# G = ox.graph_from_point((lat, lon), dist=distance, network_type='all')
+
+# G_proj = ox.project_graph(G)
+
+
+
+# # Define the projection (e.g., UTM zone for Berlin, which is zone 33U)
+# utm_proj = Proj(proj="utm", zone=33, datum="WGS84")
+
+# # Iterate over nodes to transform coordinates
+# for node, data in G.nodes(data=True):
+#     x, y = utm_proj(data['x'], data['y'])  # Project lon, lat to x, y
+#     G.nodes[node]['x'] = x
+#     G.nodes[node]['y'] = y
+
+# for node, data in G_proj.nodes(data=True):
+#     print(f"Node {node}: x={data['x']}, y={data['y']}")
+
+import osmnx as ox
+import networkx as nx
+import numpy as np
+
+# Step 1: Get the graph and project it
+lat, lon = 52.5200, 13.4050  # Example coordinates (Berlin, Germany)
+distance = 500  # 500 meters
+G = ox.graph_from_point((lat, lon), dist=distance, network_type='all')
+G_proj = ox.project_graph(G)  # Project to UTM
+
+# Step 2: Extract x and y coordinates
+x_values = np.array([data['x'] for node, data in G_proj.nodes(data=True)])
+y_values = np.array([data['y'] for node, data in G_proj.nodes(data=True)])
+
+# Step 3: Normalize the coordinates between 0 and 1
+x_min, x_max = x_values.min(), x_values.max()
+y_min, y_max = y_values.min(), y_values.max()
+
+x_norm = (x_values - x_min) / (x_max - x_min)
+y_norm = (y_values - y_min) / (y_max - y_min)
+
+# Step 4: Update the graph with normalized coordinates
+for i, (node, data) in enumerate(G_proj.nodes(data=True)):
+    data['x_norm'] = x_norm[i]
+    data['y_norm'] = y_norm[i]
+
+# Now each node has 'x_norm' and 'y_norm' as normalized coordinates between 0 and 1
+for node, data in G_proj.nodes(data=True):
+    print(f"Node {node}: x={data['x_norm']}, y={data['y_norm']}")

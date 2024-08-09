@@ -13,18 +13,21 @@ import pickle
 
 def main():
     #get the city population data > 100k
-    df_city_p = get_cities_w_pop_gt_100k()
+    # df_city_p = get_cities_w_pop_gt_100k()
 
     # city names list
-    cities = df_city_p['city'].to_list()
+    # cities = df_city_p['city'].to_list()
+    # write the lat long of the cities
+    #   write_lat_long(cities)
 
     #lets get network x data for all the graphs in a list
     # file_path = './data/city_lat_long.csv'
-    # l_netx_cities = get_networkx_data_from_coords(file_path)
+    # distance = 500
+    # l_netx_cities = get_networkx_data_from_coords(file_path, distance)
     with open("./data/networkx_cities_graph/cities_graphs.pkl", "rb") as f:
         l_netx_cities = pickle.load(f)
 
-    print(len(l_netx_cities))
+    print(l_netx_cities[0].nodes())
 
 
 def get_networkx_data_from_coords(file_path, distance=500):
@@ -84,6 +87,58 @@ def get_networkx_data_from_coords(file_path, distance=500):
     return l_netx_cities
     # with open("./data/networkx_cities_graph/cities_graphs.pkl", "wb") as f:
     #     pickle.dump(l_netx_cities, f)
+
+# takes lot of time to get the lat_long so I have written down a csv file
+def write_lat_long(cities):
+    lat_long = get_lat_long(cities)
+    file_path = './data/city_lat_long.csv'
+    with open(file_path, mode='w', newline='') as file:
+        writer = csv.writer(file)
+        writer.writerows(lat_long)
+
+def get_lat_long(cities):
+    geolocator = Nominatim(user_agent="city_locator")
+    cities_w_ll = []
+    for city in cities:
+        try:
+            location = geolocator.geocode(city + ", Germany")
+            # print(location)
+            if location:
+                cities_w_ll.append((location.latitude, location.longitude)) 
+        except Exception as e:
+            print(f"Error getting coordinates for {city}: {e}")
+            # return None
+    return cities_w_ll
+
+def get_cities_w_pop_gt_100k():
+    df_city_p = pd.read_csv('./data/Germany_cities_pop.csv',delimiter=';'
+                            ,encoding='ISO-8859-1',header=None)
+    
+    #drop other columns, only take the 2023 data
+    df_city_p = df_city_p.drop(columns=[0,2,3,4,5])
+
+    #change column name
+    col_name = {1:'city', 6:'population'}
+
+    df_city_p.rename(columns=col_name,inplace=True)
+
+    #remove - from population column
+    df_city_p = df_city_p[df_city_p['population']!='-']
+
+    # change data type of population to int
+    df_city_p['population'] = df_city_p['population'].astype('Int64')
+
+    #Consider only the cities with population more than 100000
+    df_city_p = df_city_p[df_city_p['population']>=100000]
+
+    # extract only the city name
+    df_city_p['city'] = df_city_p['city'].str.split(',',expand=True)[0]
+
+    return df_city_p
+
+
+if __name__ == '__main__':
+    main()
 
 #################################################
 
@@ -162,57 +217,6 @@ def get_networkx_data_from_coords(file_path, distance=500):
 
 
 
-# takes lot of time to get the lat_long so I have written down a csv file
-def write_lat_long(cities):
-    lat_long = get_lat_long(cities)
-    file_path = './data/city_lat_long.csv'
-    with open(file_path, mode='w', newline='') as file:
-        writer = csv.writer(file)
-        writer.writerows(lat_long)
-
-def get_lat_long(cities):
-    geolocator = Nominatim(user_agent="city_locator")
-    cities_w_ll = []
-    for city in cities:
-        try:
-            location = geolocator.geocode(city + ", Germany")
-            # print(location)
-            if location:
-                cities_w_ll.append((location.latitude, location.longitude)) 
-        except Exception as e:
-            print(f"Error getting coordinates for {city}: {e}")
-            # return None
-    return cities_w_ll
-
-def get_cities_w_pop_gt_100k():
-    df_city_p = pd.read_csv('./data/Germany_cities_pop.csv',delimiter=';'
-                            ,encoding='ISO-8859-1',header=None)
-    
-    #drop other columns, only take the 2023 data
-    df_city_p = df_city_p.drop(columns=[0,2,3,4,5])
-
-    #change column name
-    col_name = {1:'city', 6:'population'}
-
-    df_city_p.rename(columns=col_name,inplace=True)
-
-    #remove - from population column
-    df_city_p = df_city_p[df_city_p['population']!='-']
-
-    # change data type of population to int
-    df_city_p['population'] = df_city_p['population'].astype('Int64')
-
-    #Consider only the cities with population more than 100000
-    df_city_p = df_city_p[df_city_p['population']>=100000]
-
-    # extract only the city name
-    df_city_p['city'] = df_city_p['city'].str.split(',',expand=True)[0]
-
-    return df_city_p
-
-
-if __name__ == '__main__':
-    main()
 
 
 
