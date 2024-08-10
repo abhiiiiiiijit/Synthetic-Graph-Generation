@@ -62,7 +62,7 @@ import pickle
 
 # print(len(loaded_graphs))
 # import osmnx as ox
-# from pyproj import Proj, transform
+# from pyproj import Proj, 
 # # Define the latitude, longitude, and distance (in meters)
 # lat, lon = 52.5200, 13.4050  # Example coordinates (Berlin, Germany)
 # distance = 500  # 500 meters
@@ -77,7 +77,7 @@ import pickle
 # # Define the projection (e.g., UTM zone for Berlin, which is zone 33U)
 # utm_proj = Proj(proj="utm", zone=33, datum="WGS84")
 
-# # Iterate over nodes to transform coordinates
+# # Iterate over nodes to  coordinates
 # for node, data in G.nodes(data=True):
 #     x, y = utm_proj(data['x'], data['y'])  # Project lon, lat to x, y
 #     G.nodes[node]['x'] = x
@@ -86,15 +86,68 @@ import pickle
 # for node, data in G_proj.nodes(data=True):
 #     print(f"Node {node}: x={data['x']}, y={data['y']}")
 
-import osmnx as ox
-import networkx as nx
-import numpy as np
+# import osmnx as ox
+# import networkx as nx
+# import numpy as np
 
-# Step 1: Get the graph and project it
-lat, lon = 52.5200, 13.4050  # Example coordinates (Berlin, Germany)
-distance = 500  # 500 meters
-G = ox.graph_from_point((lat, lon), dist=distance, network_type='all')
-G_proj = ox.project_graph(G)  # Project to UTM
+# # Step 1: Get the graph and project it
+# lat, lon = 52.5200, 13.4050  # Example coordinates (Berlin, Germany)
+# distance = 500  # 500 meters
+# G = ox.graph_from_point((lat, lon), dist=distance, network_type='all')
+# G_proj = ox.project_graph(G)  # Project to UTM
+
+# # Step 2: Extract x and y coordinates
+# x_values = np.array([data['x'] for node, data in G_proj.nodes(data=True)])
+# y_values = np.array([data['y'] for node, data in G_proj.nodes(data=True)])
+
+# # Step 3: Normalize the coordinates between 0 and 1
+# x_min, x_max = x_values.min(), x_values.max()
+# y_min, y_max = y_values.min(), y_values.max()
+
+# x_norm = (x_values - x_min) / (x_max - x_min)
+# y_norm = (y_values - y_min) / (y_max - y_min)
+
+# # Step 4: Update the graph with normalized coordinates
+# for i, (node, data) in enumerate(G_proj.nodes(data=True)):
+#     data['x_norm'] = x_norm[i]
+#     data['y_norm'] = y_norm[i]
+
+# # Now each node has 'x_norm' and 'y_norm' as normalized coordinates between 0 and 1
+# for node, data in G_proj.nodes(data=True):
+#     print(f"Node {node}: x={data['x_norm']}, y={data['y_norm']}")
+
+import osmnx as ox
+import geopandas as gpd
+from shapely.geometry import Point
+import numpy as np
+# Define the central point and the distance (in meters)
+point = (37.7749, -122.4194)  # Example: San Francisco, CA
+distance = 500  # meters
+
+# Get the bounding box coordinates
+bbox = ox.utils_geo.bbox_from_point(point, dist=distance)
+
+# bbox = ox.project_gdf(bbox)
+
+# Unpack the bounding box coordinates
+north, south, east, west = bbox
+
+# Project each corner of the bounding box to UTM
+west_south_utm = (west, south)
+east_south_utm = ( east, south)
+east_north_utm = ( east, north)
+west_north_utm = ( west, north)
+
+
+# utm_coords_list = [north, south, east, west]
+utm_coords_list = [west_south_utm, east_north_utm,west_north_utm,east_south_utm]
+
+# Define the UTM CRS (for example, UTM zone 10N)
+utm_crs = "EPSG:3857"
+# Retrieve the graph from the point
+G_proj = ox.graph_from_point(point, dist=distance, network_type='drive')
+
+G_proj = ox.project_graph(G_proj, to_crs='epsg:3857') 
 
 # Step 2: Extract x and y coordinates
 x_values = np.array([data['x'] for node, data in G_proj.nodes(data=True)])
@@ -104,14 +157,41 @@ y_values = np.array([data['y'] for node, data in G_proj.nodes(data=True)])
 x_min, x_max = x_values.min(), x_values.max()
 y_min, y_max = y_values.min(), y_values.max()
 
-x_norm = (x_values - x_min) / (x_max - x_min)
-y_norm = (y_values - y_min) / (y_max - y_min)
 
-# Step 4: Update the graph with normalized coordinates
-for i, (node, data) in enumerate(G_proj.nodes(data=True)):
-    data['x_norm'] = x_norm[i]
-    data['y_norm'] = y_norm[i]
 
-# Now each node has 'x_norm' and 'y_norm' as normalized coordinates between 0 and 1
-for node, data in G_proj.nodes(data=True):
-    print(f"Node {node}: x={data['x_norm']}, y={data['y_norm']}")
+# # Create Point objects for each UTM tuple
+# points = [Point(coords) for coords in utm_coords_list]
+
+# # Create a GeoDataFrame from the list of Point objects with the UTM CRS
+# gdf = gpd.GeoDataFrame(index=range(len(points)), crs=utm_crs, geometry=points)
+
+
+# bbox2 = ox.project_gdf(gdf)
+
+from pyproj import Proj, transform
+
+# Define the EPSG:4326 (WGS84) and EPSG:3857 (Web Mercator) projections
+wgs84 = Proj(init='epsg:4326')  # Lat/Long
+web_mercator = Proj(init='epsg:3857')  # Web Mercator
+
+# Example coordinates (longitude, latitude)
+lon, lat = -122.42508885165161, 37.77939660167747 # New York City
+
+# Transform the coordinates to EPSG:3857
+x, y = transform(wgs84, web_mercator, lon, lat)
+
+
+# # Display the GeoDataFrame
+print(G_proj.nodes(data=True))
+# print(G)
+print(utm_coords_list)
+print(f"Projected coordinates: x={x}, y={y}")
+# print(bbox2)
+print(x_max,x_min,y_max,y_min)
+
+# # Print the coordinates
+# print(f"North: {north}, South: {south}, East: {east}, West: {west}")
+
+
+
+
