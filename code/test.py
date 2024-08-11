@@ -128,7 +128,7 @@ distance = 500  # meters
 bbox = ox.utils_geo.bbox_from_point(point, dist=distance)
 
 # bbox = ox.project_gdf(bbox)
-
+   
 # Unpack the bounding box coordinates
 north, south, east, west = bbox
 
