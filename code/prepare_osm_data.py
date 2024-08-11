@@ -9,6 +9,9 @@ import torch
 from torch_geometric.data import Data
 from torch_geometric.utils import from_networkx
 import pickle
+from pyproj import Transformer
+# from pyproj import Proj, transform
+import numpy as np
 # cd 
 
 def main():
@@ -24,10 +27,23 @@ def main():
     # file_path = './data/city_lat_long.csv'
     # distance = 500
     # l_netx_cities = get_networkx_data_from_coords(file_path, distance)
-    with open("./data/networkx_cities_graph/cities_graphs.pkl", "rb") as f:
+    with open("./data/networkx_cities_graph/ccs_cities_graphs.pkl", "rb") as f:
         l_netx_cities = pickle.load(f)
 
-    print(l_netx_cities[0].nodes())
+    print(l_netx_cities[56].nodes(data=True))
+
+def get_ccs_of_nodes(x, y, north, south, east, west):# returns list of (x, y)
+    transformer = Transformer.from_crs("EPSG:4326", "EPSG:3857",always_xy=True)
+    x_ccs, y_ccs = transformer.transform( x, y)
+    x_min, y_min = transformer.transform( west, south)
+    x_max, y_max = transformer.transform( east, north)
+
+#precison of 2, considering a nodes area to be 10m
+    x_ccs = round((x_ccs - x_min) / (x_max - x_min),2)
+    y_ccs = round((y_ccs - y_min) / (y_max - y_min),2)
+
+    # print(x_ccs,y_ccs,x_min,y_min,x_max,y_max)
+    return [ x_ccs, y_ccs]
 
 
 def get_networkx_data_from_coords(file_path, distance=500):
@@ -45,6 +61,13 @@ def get_networkx_data_from_coords(file_path, distance=500):
             # 1. Obtain the graph from OpenStreetMap
 
                 G = ox.graph_from_point((lat, long), dist=distance, network_type='drive')
+                #latitude is y, long is x in nodes
+
+                # Get the bounding box coordinates
+                bbox = ox.utils_geo.bbox_from_point((lat, long), dist=distance)
+                
+                # Unpack the bounding box coordinates
+                north, south, east, west = bbox
             except Exception:
                 continue
 
@@ -60,7 +83,7 @@ def get_networkx_data_from_coords(file_path, distance=500):
                     if not (bool(node_data['x']) or bool(node_data['y'])):
                         nodes_to_remove.append(node)
                     else:
-                        G.nodes[node]['x'] = [ node_data['x'],node_data['y']]
+                        G.nodes[node]['x'] = get_ccs_of_nodes(node_data['x'], node_data['y'], north, south, east, west) #[ node_data['x'],node_data['y']]
                         for key in list(node_data.keys()):
                             if key != 'x':
                                 del node_data[key]
@@ -84,9 +107,10 @@ def get_networkx_data_from_coords(file_path, distance=500):
         print(f"An unexpected error occurred: {e}")
         
 
-    return l_netx_cities
-    # with open("./data/networkx_cities_graph/cities_graphs.pkl", "wb") as f:
+    # return l_netx_cities
+    # with open("./data/networkx_cities_graph/ccs_cities_graphs.pkl", "wb") as f:
     #     pickle.dump(l_netx_cities, f)
+    return l_netx_cities
 
 # takes lot of time to get the lat_long so I have written down a csv file
 def write_lat_long(cities):

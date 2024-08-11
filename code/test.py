@@ -138,6 +138,7 @@ east_south_utm = ( east, south)
 east_north_utm = ( east, north)
 west_north_utm = ( west, north)
 
+print(west_south_utm,east_north_utm)
 
 # utm_coords_list = [north, south, east, west]
 utm_coords_list = [west_south_utm, east_north_utm,west_north_utm,east_south_utm]
@@ -168,26 +169,26 @@ y_min, y_max = y_values.min(), y_values.max()
 
 # bbox2 = ox.project_gdf(gdf)
 
-from pyproj import Proj, transform
+# from pyproj import Proj, transform
 
-# Define the EPSG:4326 (WGS84) and EPSG:3857 (Web Mercator) projections
-wgs84 = Proj(init='epsg:4326')  # Lat/Long
-web_mercator = Proj(init='epsg:3857')  # Web Mercator
+# # Define the EPSG:4326 (WGS84) and EPSG:3857 (Web Mercator) projections
+# wgs84 = Proj(init='epsg:4326')  # Lat/Long
+# web_mercator = Proj(init='epsg:3857')  # Web Mercator
 
-# Example coordinates (longitude, latitude)
-lon, lat = -122.42508885165161, 37.77939660167747 # New York City
+# # Example coordinates (longitude, latitude)
+# lon, lat = -122.42508885165161, 37.77939660167747 # New York City
 
-# Transform the coordinates to EPSG:3857
-x, y = transform(wgs84, web_mercator, lon, lat)
+# # Transform the coordinates to EPSG:3857
+# x, y = transform(wgs84, web_mercator, lon, lat)
 
 
-# # Display the GeoDataFrame
-print(G_proj.nodes(data=True))
-# print(G)
-print(utm_coords_list)
-print(f"Projected coordinates: x={x}, y={y}")
-# print(bbox2)
-print(x_max,x_min,y_max,y_min)
+# # # Display the GeoDataFrame
+# print(G_proj.nodes(data=True))
+# # print(G)
+# print(utm_coords_list)
+# print(f"Projected coordinates: x={x}, y={y}")
+# # print(bbox2)
+# print(x_max,x_min,y_max,y_min)
 
 # # Print the coordinates
 # print(f"North: {north}, South: {south}, East: {east}, West: {west}")
