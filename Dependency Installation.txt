@@ -1,0 +1,18 @@
+pip install torch torchvision torchaudio torch-geometric
+pip install torch-scatter torch-sparse torch-cluster torch-spline-conv -f https://data.pyg.org/whl/torch-$(python -c "import torch; print(torch.__version__)").html
+
+
+#############################
+#Create virtual env
+python -m venv masters
+# activate virtual env
+masters\Scripts\activate
+#############################
+# all the dependencies
+pip install pandas
+pip install geopy
+pip install osmnx
+pip install matplotlib
+pip install torch
+pip install torch-geometric
+############################
