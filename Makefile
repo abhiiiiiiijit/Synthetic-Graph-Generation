@@ -19,6 +19,10 @@ init:
 test:
 	python ./code/test.py
 
+.PHONY: ae_model
+ae_model:
+	python ./code/ae_model.py
+
 .PHONY: avenv
 avenv:
 	D:\Git\env\Scripts\Activate.ps1
