@@ -10,6 +10,8 @@ from torch_geometric.data import Data
 from torch_geometric.utils import from_networkx
 import pickle
 from pyproj import Transformer
+import torch_geometric.transforms as T
+
 
 def main():
 
@@ -27,12 +29,25 @@ def main():
     # plt.show()
   
     # l_netx_cities = remove_edge_features(l_netx_cities)
-
+    if torch.cuda.is_available():
+        device = torch.device('cuda')
+    elif hasattr(torch.backends, 'mps') and torch.backends.mps.is_available():
+        device = torch.device('mps')
+    else:
+        device = torch.device('cpu')
+    transform = T.Compose([
+        T.ToDevice(device),
+        T.RandomLinkSplit(num_val=0.05, num_test=0.1, is_undirected=True,
+                      split_labels=True, add_negative_train_samples=False),
+    ])
     G = l_netx_cities[0]
-    g1 = from_networkx(G)
+    data = from_networkx(G)
     # print(l_netx_cities[0].nodes(data=True))
-    print(g1.edge_index)
+    # print(g1.pos_edge_label_index)
+    # print(g1.get_summary())
+    train_data, val_data, test_data = transform(data)
 
+    print(train_data.neg_edge_label_index)
 def remove_edge_features(graph_list):
     for G in graph_list:
             for u, v, key in G.edges(keys=True):
