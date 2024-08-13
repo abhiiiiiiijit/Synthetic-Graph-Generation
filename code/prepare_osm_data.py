@@ -24,13 +24,13 @@ def main():
     #   write_lat_long(cities)
 
     #lets get network x data for all the graphs in a list
-    # file_path = './data/city_lat_long.csv'
-    # distance = 500
-    # l_netx_cities = get_networkx_data_from_coords(file_path, distance)
-    with open("./data/networkx_cities_graph/ccs_cities_graphs.pkl", "rb") as f:
-        l_netx_cities = pickle.load(f)
+    file_path = './data/city_lat_long.csv'
+    distance = 500
+    l_netx_cities = get_networkx_data_from_coords(file_path, distance)
+    # with open("./data/networkx_cities_graph/ccs_cities_graphs.pkl", "rb") as f:
+    #     l_netx_cities = pickle.load(f)
 
-    print(l_netx_cities[56].nodes(data=True))
+    # print(l_netx_cities[56].nodes(data=True))
 
 def get_ccs_of_nodes(x, y, north, south, east, west):# returns list of (x, y)
     transformer = Transformer.from_crs("EPSG:4326", "EPSG:3857",always_xy=True)
@@ -62,6 +62,8 @@ def get_networkx_data_from_coords(file_path, distance=500):
 
                 G = ox.graph_from_point((lat, long), dist=distance, network_type='drive')
                 #latitude is y, long is x in nodes
+
+                G = ox.convert.to_undirected(G)
 
                 # Get the bounding box coordinates
                 bbox = ox.utils_geo.bbox_from_point((lat, long), dist=distance)
@@ -95,21 +97,21 @@ def get_networkx_data_from_coords(file_path, distance=500):
             G.remove_nodes_from(nodes_to_remove)
 
             # clear edge features
-            for u, v in G.edges():
-                # print(G.edges)
-                G.edges[(u,v,0)].clear()
+            # for u, v in G.edges():
+            #     # print(G.edges)
+            #     G.edges[(u,v,0)].clear()
             l_netx_cities.append(G)
             # print(G.edges)
 
             # pyg_data = from_networkx(G)
             # print(pyg_data.x)
     except Exception as e:
-        print(f"An unexpected error occurred: {e}")
+        print(f"An unexpected error occurred: {type(e)}")
         
 
     # return l_netx_cities
-    # with open("./data/networkx_cities_graph/ccs_cities_graphs.pkl", "wb") as f:
-    #     pickle.dump(l_netx_cities, f)
+    with open("./data/networkx_cities_graph/ccs_cities_graphs.pkl", "wb") as f:
+        pickle.dump(l_netx_cities, f)
     return l_netx_cities
 
 # takes lot of time to get the lat_long so I have written down a csv file
