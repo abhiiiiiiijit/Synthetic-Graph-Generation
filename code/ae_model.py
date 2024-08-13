@@ -12,13 +12,6 @@ import pickle
 from pyproj import Transformer
 
 def main():
-    #get the city population data > 100k
-    # df_city_p = get_cities_w_pop_gt_100k()
-
-    # city names list
-    # cities = df_city_p['city'].to_list()
-    # write the lat long of the cities
-    #   write_lat_long(cities)
 
     #lets get network x data for all the graphs in a list
     # file_path = './data/city_lat_long.csv'
@@ -32,10 +25,13 @@ def main():
     # pos = {e[0]:tuple(e[1]['x']) for e in l_netx_cities[0].nodes(data=True)}
     # nx.draw(l_netx_cities[0],pos=pos)
     # plt.show()
-    # G = l_netx_cities[0]
+  
     # l_netx_cities = remove_edge_features(l_netx_cities)
-    print(l_netx_cities[0].edges(data=True))
-    print(len(l_netx_cities))
+
+    G = l_netx_cities[0]
+    g1 = from_networkx(G)
+    # print(l_netx_cities[0].nodes(data=True))
+    print(g1.edge_index)
 
 def remove_edge_features(graph_list):
     for G in graph_list:
