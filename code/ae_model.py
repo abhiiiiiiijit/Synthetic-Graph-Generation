@@ -105,7 +105,7 @@ def train(model,optimizer,train_data,is_variational):
     # print(len(z))
     # dc = torch.sigmoid( model.decode(z,train_data.edge_index))
     # print(len(dc))
-    # print(dc)
+    # print(dc)   
     if is_variational:
         loss = loss + (1 / train_data.num_nodes) * model.kl_loss()
     loss.backward()
