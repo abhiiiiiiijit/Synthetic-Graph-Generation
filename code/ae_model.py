@@ -37,7 +37,7 @@ def main():
     # l_netx_cities = remove_edge_features(l_netx_cities)
     is_variational = False
     is_linear = False
-    iteration = 2
+    iteration = 10
 
     if torch.cuda.is_available():
         device = torch.device('cuda')
@@ -57,26 +57,36 @@ def main():
     # print(g1.get_summary())
     train_data, val_data, test_data = transform(data)
     in_channels, out_channels = data.num_features, 16
+    # print(data, train_data, val_data, test_data)
 
-    if not is_variational and not is_linear:
-        model = GAE(GCNEncoder(in_channels, out_channels))
     # elif not is_variational and is_linear:
     #     model = GAE(LinearEncoder(in_channels, out_channels))
     # elif is_variational and not is_linear:
     #     model = VGAE(VariationalGCNEncoder(in_channels, out_channels))
     # elif is_variational and is_linear:
     #     model = VGAE(VariationalLinearEncoder(in_channels, out_channels))
+###################################
+    if not is_variational and not is_linear:
+        model = GAE(GCNEncoder(in_channels, out_channels))
 
     model = model.to(device)
     optimizer = torch.optim.Adam(model.parameters(), lr=0.01)
     times = []
     for epoch in range(1, iteration + 1):
         start = time.time()
-        loss = train(model,optimizer,train_data,is_variational)
+        loss = train(model, optimizer, train_data, is_variational)
         auc, ap = test(test_data, model)
         print(f'Epoch: {epoch:03d}, AUC: {auc:.4f}, AP: {ap:.4f}')
         times.append(time.time() - start)
     print(f"Median time per epoch: {torch.tensor(times).median():.4f}s")
+
+    # save the model
+    torch.save(model, './code/models/gae_model_v1.pth')
+
+    #test the saved model
+    model = torch.load('./code/models/gae_model_v1.pth')
+    auc, ap = test(val_data, model)
+    print(f'Epoch: {epoch:03d}, AUC: {auc:.4f}, AP: {ap:.4f}')
 
     # for epoch in range(1, iteration + 1):
     #     start = time.time()
@@ -97,7 +107,7 @@ class GCNEncoder(torch.nn.Module):
         x = self.conv1(x, edge_index).relu()
         return self.conv2(x, edge_index)
 
-def train(model,optimizer,train_data,is_variational):
+def train(model, optimizer, train_data, is_variational):
     model.train()
     optimizer.zero_grad()
     z = model.encode(train_data.x, train_data.edge_index)
@@ -117,6 +127,7 @@ def train(model,optimizer,train_data,is_variational):
 def test(data, model):
     model.eval()
     z = model.encode(data.x, data.edge_index)
+    # print(z)
     return model.test(z, data.pos_edge_label_index, data.neg_edge_label_index)
 
 def remove_edge_features(graph_list):
