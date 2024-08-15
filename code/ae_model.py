@@ -37,7 +37,7 @@ def main():
     # l_netx_cities = remove_edge_features(l_netx_cities)
     is_variational = False
     is_linear = False
-    iteration = 10
+    iteration = 1
 
     if torch.cuda.is_available():
         device = torch.device('cuda')
@@ -50,8 +50,25 @@ def main():
         T.RandomLinkSplit(num_val=0.05, num_test=0.1, is_undirected=True,
                       split_labels=True, add_negative_train_samples=False),
     ])
-    G = l_netx_cities[0]
-    data = from_networkx(G)
+    g1 = l_netx_cities[0]
+    g2 = l_netx_cities[1]
+    data1 = from_networkx(g1)
+    data2 = from_networkx(g2)
+    # Concatenate node features (x) and other relevant data
+    x = torch.cat([data1.x, data2.x], dim=0)
+    # Concatenate edge indices with index offset for the second graph
+    edge_index = torch.cat([data1.edge_index, data2.edge_index + data1.num_nodes], dim=1)
+    # Create the combined Data object
+    data = Data(x=x, edge_index=edge_index)
+
+    print(data1.edge_index)
+    print(data2.edge_index)
+    print(data.edge_index)
+
+    # print(data1.x[0],data1.x[-1])
+    # print(data2.x[0],data2.x[-1])
+    # print(data.x[0],data.x[-1])
+
     # print(l_netx_cities[0].nodes(data=True))
     # print(g1.pos_edge_label_index)
     # print(g1.get_summary())
