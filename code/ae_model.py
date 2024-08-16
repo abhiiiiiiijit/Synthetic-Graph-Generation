@@ -37,7 +37,7 @@ def main():
     # l_netx_cities = remove_edge_features(l_netx_cities)
     is_variational = False
     is_linear = False
-    iteration = 1
+    iteration = 200
 
     if torch.cuda.is_available():
         device = torch.device('cuda')
@@ -50,20 +50,12 @@ def main():
         T.RandomLinkSplit(num_val=0.05, num_test=0.1, is_undirected=True,
                       split_labels=True, add_negative_train_samples=False),
     ])
-    g1 = l_netx_cities[0]
-    g2 = l_netx_cities[1]
-    data1 = from_networkx(g1)
-    data2 = from_networkx(g2)
-    # Concatenate node features (x) and other relevant data
-    x = torch.cat([data1.x, data2.x], dim=0)
-    # Concatenate edge indices with index offset for the second graph
-    edge_index = torch.cat([data1.edge_index, data2.edge_index + data1.num_nodes], dim=1)
-    # Create the combined Data object
-    data = Data(x=x, edge_index=edge_index)
 
-    print(data1.edge_index)
-    print(data2.edge_index)
-    print(data.edge_index)
+    data = agg_all_graph(l_netx_cities)
+
+    # print(data1.edge_index)
+    # print(data2.edge_index)
+    # print(data.edge_index)
 
     # print(data1.x[0],data1.x[-1])
     # print(data2.x[0],data2.x[-1])
@@ -98,11 +90,11 @@ def main():
     print(f"Median time per epoch: {torch.tensor(times).median():.4f}s")
 
     # save the model
-    torch.save(model, './code/models/gae_model_v1.pth')
+    # torch.save(model, './code/models/gae_model_v1.pth')  Epoch: 200, AUC: 0.8713, AP: 0.8252
 
     #test the saved model
     model = torch.load('./code/models/gae_model_v1.pth')
-    auc, ap = test(val_data, model)
+    auc, ap = test(test_data, model)
     print(f'Epoch: {epoch:03d}, AUC: {auc:.4f}, AP: {ap:.4f}')
 
     # for epoch in range(1, iteration + 1):
@@ -113,6 +105,16 @@ def main():
     #     times.append(time.time() - start)
     # print(f"Median time per epoch: {torch.tensor(times).median():.4f}s")
     # print(data.num_features)
+
+
+def agg_all_graph(g_list):
+    data1 = from_networkx(g_list[0])
+    for i in range(1, len(g_list)):
+        data2 = from_networkx(g_list[i])
+        x = torch.cat([data1.x, data2.x], dim=0)
+        edge_index = torch.cat([data1.edge_index, data2.edge_index + data1.num_nodes], dim=1)
+        data1 = Data(x=x, edge_index=edge_index)
+    return data1
 
 class GCNEncoder(torch.nn.Module):
     def __init__(self, in_channels, out_channels):
