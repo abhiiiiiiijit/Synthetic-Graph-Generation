@@ -97,15 +97,6 @@ def main():
     auc, ap = test(test_data, model)
     print(f'Epoch: {epoch:03d}, AUC: {auc:.4f}, AP: {ap:.4f}')
 
-    # for epoch in range(1, iteration + 1):
-    #     start = time.time()
-    #     loss = train(model,optimizer,train_data,is_variational)
-    #     auc, ap = test(test_data, model)
-    #     print(f'Epoch: {epoch:03d}, AUC: {auc:.4f}, AP: {ap:.4f}')
-    #     times.append(time.time() - start)
-    # print(f"Median time per epoch: {torch.tensor(times).median():.4f}s")
-    # print(data.num_features)
-
 
 def agg_all_graph(g_list):
     data1 = from_networkx(g_list[0])
