@@ -17,7 +17,7 @@ import torch
 import torch_geometric.transforms as T
 # from torch_geometric.datasets import Planetoid
 from torch_geometric.nn import GAE, VGAE, GCNConv
-
+import random
 
 def main():
 
@@ -51,7 +51,25 @@ def main():
                       split_labels=True, add_negative_train_samples=False),
     ])
 
-    data = agg_all_graph(l_netx_cities)
+
+#########################################################
+##Save the graph
+    # data = agg_all_graph(l_netx_cities)
+    # with open("./data/tg_graphs/tg_graphs_all.pkl", "wb") as f:
+    #     pickle.dump(data, f)
+
+##########################################################
+
+    with open("./data/tg_graphs/tg_graphs_all.pkl", "rb") as f:
+        data = pickle.load(f)
+
+    # print(data.x[0:5])
+    data = select_random_nodes(data, 500)
+    print(len(data.x))
+    #test the saved model
+    # model = torch.load('./code/models/gae_model_v1.pth')
+    # auc, ap = test(data, model)
+    # print(f'AUC: {auc:.4f}, AP: {ap:.4f}')
 
     # print(data1.edge_index)
     # print(data2.edge_index)
@@ -64,8 +82,7 @@ def main():
     # print(l_netx_cities[0].nodes(data=True))
     # print(g1.pos_edge_label_index)
     # print(g1.get_summary())
-    train_data, val_data, test_data = transform(data)
-    in_channels, out_channels = data.num_features, 16
+
     # print(data, train_data, val_data, test_data)
 
     # elif not is_variational and is_linear:
@@ -74,29 +91,54 @@ def main():
     #     model = VGAE(VariationalGCNEncoder(in_channels, out_channels))
     # elif is_variational and is_linear:
     #     model = VGAE(VariationalLinearEncoder(in_channels, out_channels))
-###################################
-    if not is_variational and not is_linear:
-        model = GAE(GCNEncoder(in_channels, out_channels))
+###################################training
+    # train_data, val_data, test_data = transform(data)
+    # in_channels, out_channels = data.num_features, 16    
+    # if not is_variational and not is_linear:
+    #     model = GAE(GCNEncoder(in_channels, out_channels))
 
-    model = model.to(device)
-    optimizer = torch.optim.Adam(model.parameters(), lr=0.01)
-    times = []
-    for epoch in range(1, iteration + 1):
-        start = time.time()
-        loss = train(model, optimizer, train_data, is_variational)
-        auc, ap = test(test_data, model)
-        print(f'Epoch: {epoch:03d}, AUC: {auc:.4f}, AP: {ap:.4f}')
-        times.append(time.time() - start)
-    print(f"Median time per epoch: {torch.tensor(times).median():.4f}s")
-
+    # model = model.to(device)
+    # optimizer = torch.optim.Adam(model.parameters(), lr=0.01)
+    # times = []
+    # for epoch in range(1, iteration + 1):
+    #     start = time.time()
+    #     loss = train(model, optimizer, train_data, is_variational)
+    #     auc, ap = test(test_data, model)
+    #     print(f'Epoch: {epoch:03d}, AUC: {auc:.4f}, AP: {ap:.4f}')
+    #     times.append(time.time() - start)
+    # print(f"Median time per epoch: {torch.tensor(times).median():.4f}s")
+###################################################
     # save the model
     # torch.save(model, './code/models/gae_model_v1.pth')  Epoch: 200, AUC: 0.8713, AP: 0.8252
 
-    #test the saved model
-    model = torch.load('./code/models/gae_model_v1.pth')
-    auc, ap = test(test_data, model)
-    print(f'Epoch: {epoch:03d}, AUC: {auc:.4f}, AP: {ap:.4f}')
 
+
+
+def select_random_nodes(data: Data, num_nodes: int) -> Data:
+    # Check that the number of nodes to select is less than or equal to the total number of nodes
+    if num_nodes > data.num_nodes:
+        raise ValueError("num_nodes cannot be greater than the total number of nodes in the data.")
+
+    # Randomly select `num_nodes` indices from the available nodes
+    selected_nodes = random.sample(range(data.num_nodes), num_nodes)
+
+    # Create a mask to filter out the selected nodes
+    node_mask = torch.zeros(data.num_nodes, dtype=torch.bool)
+    node_mask[selected_nodes] = True
+
+    # Select the edges that connect the selected nodes
+    # edge_mask = node_mask[data.edge_index[0]] & node_mask[data.edge_index[1]]
+
+    # Create the new Data object with the selected nodes and edges
+    selected_data = Data(
+        x=data.x[node_mask]
+        # edge_index=data.edge_index[:, edge_mask],
+        # edge_attr=data.edge_attr[edge_mask] if data.edge_attr is not None else None,
+        # y=data.y[node_mask] if data.y is not None else None,
+        # pos=data.pos[node_mask] if data.pos is not None else None
+    )
+
+    return selected_data
 
 def agg_all_graph(g_list):
     data1 = from_networkx(g_list[0])
