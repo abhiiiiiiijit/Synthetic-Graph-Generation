@@ -64,10 +64,15 @@ def main():
         data = pickle.load(f)
 
     # print(data.x[0:5])
-    data = select_random_nodes(data, 500)
+    data = select_random_nodes(data, 100)
     print(len(data.x))
     #test the saved model
-    # model = torch.load('./code/models/gae_model_v1.pth')
+    model = torch.load('./code/models/gae_model_v1.pth')
+
+    model.eval()
+    z = model.encode(data.x)
+    edge_index = model.decode(z)
+    print(edge_index)
     # auc, ap = test(data, model)
     # print(f'AUC: {auc:.4f}, AP: {ap:.4f}')
 
@@ -131,11 +136,11 @@ def select_random_nodes(data: Data, num_nodes: int) -> Data:
 
     # Create the new Data object with the selected nodes and edges
     selected_data = Data(
-        x=data.x[node_mask]
+        x=data.x[node_mask],
         # edge_index=data.edge_index[:, edge_mask],
         # edge_attr=data.edge_attr[edge_mask] if data.edge_attr is not None else None,
         # y=data.y[node_mask] if data.y is not None else None,
-        # pos=data.pos[node_mask] if data.pos is not None else None
+        pos=data.x[node_mask] #if data.pos is not None else None
     )
 
     return selected_data
