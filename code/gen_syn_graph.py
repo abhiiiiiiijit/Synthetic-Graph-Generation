@@ -7,7 +7,7 @@ import matplotlib.pyplot as plt
 import networkx as nx
 import torch
 from torch_geometric.data import Data
-from torch_geometric.utils import from_networkx
+from torch_geometric.utils import from_networkx,  remove_self_loops, coalesce, to_networkx
 import pickle
 # from pyproj import Transformer
 import torch_geometric.transforms as T
@@ -40,9 +40,34 @@ def main():
 
     train_data, val_data, test_data = transform(data)   
     model = torch.load('./code/models/gae_model_v1.pth')
-    auc, ap = test(test_data, model)
-    print(f' AUC: {auc:.4f}, AP: {ap:.4f}')
+    # auc, ap = test(test_data, model)
+    # print(f' AUC: {auc:.4f}, AP: {ap:.4f}')
 
+    #Graph coordinate positions are saved here
+    data.pos = data.x
+
+
+    model.eval()
+    z = model.encode(data.x, data.edge_index)
+
+    print(z.size()[0])
+
+    no_nodes = z.size(0)
+    sample_size = 10
+    sampled_indices = random.sample(range(no_nodes), sample_size)
+
+    # z_sampled_nodes = z[sampled_indices]
+
+    new_pyg_graph = gen_new_pyg_graph(z, data, sampled_indices)
+
+    # print(new_pyg_graph.edge_index)
+
+    visualise_graph(new_pyg_graph)
+
+    # print(data.x[n])
+    # print(threshold)
+    # print(A_prob)
+    # print(pred_edges)
     # # print(data.x[0:5])
     # print(len(test_data.x))
     # #test the saved model
@@ -64,7 +89,44 @@ def main():
     # print(len(y),len(pred))
     # # edge_index = model.decode(z)
     # print(roc_auc_score(y, pred, multi_class='ovo'))
-    
+
+
+def visualise_graph(data):
+    # Convert the PyG Data object to a NetworkX graph
+    G = to_networkx(data,  to_undirected=True)
+
+    # Visualize the graph
+    plt.figure(figsize=(8, 8))
+    nx.draw(G, pos=data.pos, with_labels=True, node_color='lightblue', edge_color='gray', node_size=500, font_size=16)
+    plt.show()
+
+def gen_new_pyg_graph(z, data, sampled_indices):
+    z_sampled_nodes = z[sampled_indices]
+
+    A_prob = torch.sigmoid(torch.matmul(z_sampled_nodes, z_sampled_nodes.t()))
+
+    threshold = 0.65 #A_prob.mean().item()
+    A_pred = (A_prob > threshold).int()
+
+    # pred_edges = from_scipy_sparse_matrix(A_pred)
+
+    pred_edges = A_pred.nonzero(as_tuple=False) 
+
+    # pred_edges = torch.concat(pred_edges[0],pred_edges[1],dim =1)
+    # Convert pred_edges to edge_index format
+    edge_index = pred_edges.t().contiguous()
+
+    # Remove self-loops
+    edge_index, _ = remove_self_loops(edge_index)
+
+    # Sort and remove duplicate edges for undirected graph
+    edge_index = coalesce(edge_index, None, num_nodes=z_sampled_nodes.size(0))[0]
+
+    x = data.x[sampled_indices]
+    pos = data.pos[sampled_indices]
+    new_graph = Data(x= x, edge_index=edge_index, pos=pos)
+
+    return new_graph
 
 
 class GCNEncoder(torch.nn.Module):
@@ -81,21 +143,21 @@ class GCNEncoder(torch.nn.Module):
 def test(data, model):
     model.eval()
     z = model.encode(data.x, data.edge_index)
-    pos_edge_index = data.pos_edge_label_index
-    neg_edge_index = data.neg_edge_label_index
-    pos_y = z.new_ones(data.pos_edge_label_index.size(1))
-    neg_y = z.new_zeros(data.neg_edge_label_index.size(1))
-    y = torch.cat([pos_y, neg_y], dim=0)
-    pos_pred = model.decode(z, pos_edge_index, sigmoid=True)
-    neg_pred = model.decode(z, neg_edge_index, sigmoid=True)
-    pred = torch.cat([pos_pred, neg_pred], dim=0)
-    pred = (pred >= 0.68).int()
-    y, pred = y.detach().cpu().numpy(), pred.detach().cpu().numpy()
-    print(roc_auc_score(y, pred), average_precision_score(y, pred))
-    # print(pos_edge_index)
-    print(y)
-    # print(y.s)
-    print(pred)
+    # pos_edge_index = data.pos_edge_label_index
+    # neg_edge_index = data.neg_edge_label_index
+    # pos_y = z.new_ones(data.pos_edge_label_index.size(1))
+    # neg_y = z.new_zeros(data.neg_edge_label_index.size(1))
+    # y = torch.cat([pos_y, neg_y], dim=0)
+    # pos_pred = model.decode(z, pos_edge_index, sigmoid=True)
+    # neg_pred = model.decode(z, neg_edge_index, sigmoid=True)
+    # pred = torch.cat([pos_pred, neg_pred], dim=0)
+    # pred = (pred >= 0.68).int()
+    # y, pred = y.detach().cpu().numpy(), pred.detach().cpu().numpy()
+    # print(roc_auc_score(y, pred), average_precision_score(y, pred))
+    # # print(pos_edge_index)
+    # print(y)
+    # # print(y.s)
+    # print(pred)
     # print(pred.size())
     return model.test(z, data.pos_edge_label_index, data.neg_edge_label_index)
 
