@@ -64,6 +64,7 @@ def main():
     # print(len(y),len(pred))
     # # edge_index = model.decode(z)
     # print(roc_auc_score(y, pred, multi_class='ovo'))
+    
 
 
 class GCNEncoder(torch.nn.Module):
