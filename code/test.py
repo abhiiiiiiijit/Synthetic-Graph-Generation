@@ -116,47 +116,47 @@ import pickle
 # for node, data in G_proj.nodes(data=True):
 #     print(f"Node {node}: x={data['x_norm']}, y={data['y_norm']}")
 
-import osmnx as ox
-import geopandas as gpd
-from shapely.geometry import Point
-import numpy as np
-# Define the central point and the distance (in meters)
-point = (37.7749, -122.4194)  # Example: San Francisco, CA
-distance = 500  # meters
+# import osmnx as ox
+# import geopandas as gpd
+# from shapely.geometry import Point
+# import numpy as np
+# # Define the central point and the distance (in meters)
+# point = (37.7749, -122.4194)  # Example: San Francisco, CA
+# distance = 500  # meters
 
-# Get the bounding box coordinates
-bbox = ox.utils_geo.bbox_from_point(point, dist=distance)
+# # Get the bounding box coordinates
+# bbox = ox.utils_geo.bbox_from_point(point, dist=distance)
 
-# bbox = ox.project_gdf(bbox)
+# # bbox = ox.project_gdf(bbox)
    
-# Unpack the bounding box coordinates
-north, south, east, west = bbox
+# # Unpack the bounding box coordinates
+# north, south, east, west = bbox
 
-# Project each corner of the bounding box to UTM
-west_south_utm = (west, south)
-east_south_utm = ( east, south)
-east_north_utm = ( east, north)
-west_north_utm = ( west, north)
+# # Project each corner of the bounding box to UTM
+# west_south_utm = (west, south)
+# east_south_utm = ( east, south)
+# east_north_utm = ( east, north)
+# west_north_utm = ( west, north)
 
-print(west_south_utm,east_north_utm)
+# print(west_south_utm,east_north_utm)
 
-# utm_coords_list = [north, south, east, west]
-utm_coords_list = [west_south_utm, east_north_utm,west_north_utm,east_south_utm]
+# # utm_coords_list = [north, south, east, west]
+# utm_coords_list = [west_south_utm, east_north_utm,west_north_utm,east_south_utm]
 
-# Define the UTM CRS (for example, UTM zone 10N)
-utm_crs = "EPSG:3857"
-# Retrieve the graph from the point
-G_proj = ox.graph_from_point(point, dist=distance, network_type='drive')
+# # Define the UTM CRS (for example, UTM zone 10N)
+# utm_crs = "EPSG:3857"
+# # Retrieve the graph from the point
+# G_proj = ox.graph_from_point(point, dist=distance, network_type='drive')
 
-G_proj = ox.project_graph(G_proj, to_crs='epsg:3857') 
+# G_proj = ox.project_graph(G_proj, to_crs='epsg:3857') 
 
-# Step 2: Extract x and y coordinates
-x_values = np.array([data['x'] for node, data in G_proj.nodes(data=True)])
-y_values = np.array([data['y'] for node, data in G_proj.nodes(data=True)])
+# # Step 2: Extract x and y coordinates
+# x_values = np.array([data['x'] for node, data in G_proj.nodes(data=True)])
+# y_values = np.array([data['y'] for node, data in G_proj.nodes(data=True)])
 
-# Step 3: Normalize the coordinates between 0 and 1
-x_min, x_max = x_values.min(), x_values.max()
-y_min, y_max = y_values.min(), y_values.max()
+# # Step 3: Normalize the coordinates between 0 and 1
+# x_min, x_max = x_values.min(), x_values.max()
+# y_min, y_max = y_values.min(), y_values.max()
 
 
 
@@ -214,3 +214,32 @@ y_min, y_max = y_values.min(), y_values.max()
 # # Optionally close the figure to free up memory
 # plt.close(fig)
 
+import torch
+
+def replace_top_x_with_1_ignore_diag(mat, x):
+    # Clone the original matrix to avoid in-place modifications
+    result = torch.zeros_like(mat)
+    
+    # Create a mask to ignore diagonal elements
+    diag_mask = torch.eye(mat.size(0), mat.size(1), device=mat.device).bool()
+    
+    # Apply the mask to set diagonal elements to -inf, so they are not considered
+    masked_mat = mat.masked_fill(diag_mask, float('-inf'))
+    
+    # Get the top x indices along each row ignoring diagonal
+    top_x_indices = torch.topk(masked_mat, x, dim=1).indices
+    
+    # Scatter 1s into the result tensor at the top x indices
+    result.scatter_(1, top_x_indices, 1)
+    
+    return result
+
+# Example usage
+mat = torch.tensor([[0.1, 0.3, 0.6, 0.9],
+                    [0.5, 0.2, 0.7, 0.1],
+                    [0.8, 0.6, 0.4, 0.2],
+                    [0.9, 0.5, 0.3, 0.98]])
+
+x = 2  # Number of highest values to replace with 1
+result = replace_top_x_with_1_ignore_diag(mat, x)
+print(result)

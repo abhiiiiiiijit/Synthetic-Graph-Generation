@@ -39,7 +39,7 @@ def main():
     ])
 
     train_data, val_data, test_data = transform(data)   
-    model = torch.load('./code/models/gae_model_v1.pth')
+    model = torch.load('./code/models/gae_model_v1.pth') #best with samplesize=10 and degree 2
     # auc, ap = test(test_data, model)
     # print(f' AUC: {auc:.4f}, AP: {ap:.4f}')
 
@@ -53,7 +53,7 @@ def main():
     print(z.size()[0])
 
     no_nodes = z.size(0)
-    sample_size = 20
+    sample_size = 12
     sampled_indices = random.sample(range(no_nodes), sample_size)
 
     # z_sampled_nodes = z[sampled_indices]
@@ -100,17 +100,37 @@ def visualise_graph(data):
     nx.draw(G, pos=data.pos, with_labels=True, node_color='lightblue', edge_color='gray', node_size=500, font_size=16)
     plt.show()
 
+def replace_top_x_with_1_ignore_diag(mat, x):
+    # Clone the original matrix to avoid in-place modifications
+    result = torch.zeros_like(mat)
+    
+    # Create a mask to ignore diagonal elements
+    diag_mask = torch.eye(mat.size(0), mat.size(1), device=mat.device).bool()
+    
+    # Apply the mask to set diagonal elements to -inf, so they are not considered
+    masked_mat = mat.masked_fill(diag_mask, float('-inf'))
+    
+    # Get the top x indices along each row ignoring diagonal
+    top_x_indices = torch.topk(masked_mat, x, dim=1).indices
+    
+    # Scatter 1s into the result tensor at the top x indices
+    result.scatter_(1, top_x_indices, 1)
+    
+    return result
+
 def gen_new_pyg_graph(z, data, sampled_indices):
     z_sampled_nodes = z[sampled_indices]
 
     A_prob = torch.sigmoid(torch.matmul(z_sampled_nodes, z_sampled_nodes.t()))
 
-    threshold = 0.5 #A_prob.mean().item()
-    A_pred = (A_prob > threshold).int()
+    # threshold = 0.5 #A_prob.mean().item()
+    # A_pred = (A_prob > threshold).int()
+
+    A_pred = replace_top_x_with_1_ignore_diag(A_prob, 2)
 
     # pred_edges = from_scipy_sparse_matrix(A_pred)
 
-    pred_edges = A_pred.nonzero(as_tuple=False) 
+    pred_edges = A_pred.nonzero(as_tuple=False)
 
     # pred_edges = torch.concat(pred_edges[0],pred_edges[1],dim =1)
     # Convert pred_edges to edge_index format
