@@ -53,7 +53,7 @@ def main():
     print(z.size()[0])
 
     no_nodes = z.size(0)
-    sample_size = 12
+    sample_size = 50
     sampled_indices = random.sample(range(no_nodes), sample_size)
 
     # z_sampled_nodes = z[sampled_indices]
