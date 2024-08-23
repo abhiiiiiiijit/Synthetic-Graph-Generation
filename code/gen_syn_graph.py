@@ -53,7 +53,7 @@ def main():
     print(z.size()[0])
 
     no_nodes = z.size(0)
-    sample_size = 10
+    sample_size = 20
     sampled_indices = random.sample(range(no_nodes), sample_size)
 
     # z_sampled_nodes = z[sampled_indices]
@@ -105,7 +105,7 @@ def gen_new_pyg_graph(z, data, sampled_indices):
 
     A_prob = torch.sigmoid(torch.matmul(z_sampled_nodes, z_sampled_nodes.t()))
 
-    threshold = 0.65 #A_prob.mean().item()
+    threshold = 0.5 #A_prob.mean().item()
     A_pred = (A_prob > threshold).int()
 
     # pred_edges = from_scipy_sparse_matrix(A_pred)
