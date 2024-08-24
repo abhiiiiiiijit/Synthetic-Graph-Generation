@@ -256,7 +256,7 @@ coords = torch.tensor([
 # Compute pairwise distances
 # (n, d) -> (n, 1, d) and (1, n, d) to perform broadcasting subtraction
 diffs = coords.unsqueeze(1) - coords.unsqueeze(0)
-
+  
 # Square the differences, sum over the coordinate dimensions, and take the square root
 dist_matrix = torch.sqrt(torch.sum(diffs**2, dim=-1))
 
