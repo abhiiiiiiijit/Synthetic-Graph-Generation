@@ -45,12 +45,12 @@ def main():
 
     #Graph coordinate positions are saved here
     data.pos = data.x
-
+    # print(data.x[0:3])
 
     model.eval()
     z = model.encode(data.x, data.edge_index)
 
-    print(z.size()[0])
+    # print(z.size()[0])
 
     no_nodes = z.size(0)
     sample_size = 50
@@ -118,13 +118,26 @@ def replace_top_x_with_1_ignore_diag(mat, x):
     
     return result
 
+def create_dist_matrix(coords):
+    # Compute pairwise distances
+    # (n, d) -> (n, 1, d) and (1, n, d) to perform broadcasting subtraction
+    diffs = coords.unsqueeze(1) - coords.unsqueeze(0)
+
+    # Square the differences, sum over the coordinate dimensions, and take the square root
+    dist_matrix = torch.sqrt(torch.sum(diffs**2, dim=-1))
+    return dist_matrix
+
 def gen_new_pyg_graph(z, data, sampled_indices):
     z_sampled_nodes = z[sampled_indices]
-
+    x = data.x[sampled_indices]
     A_prob = torch.sigmoid(torch.matmul(z_sampled_nodes, z_sampled_nodes.t()))
 
     # threshold = 0.5 #A_prob.mean().item()
     # A_pred = (A_prob > threshold).int()
+
+    A_dist = create_dist_matrix(x)
+
+    A_prob = A_prob -  A_dist
 
     A_pred = replace_top_x_with_1_ignore_diag(A_prob, 2)
 
@@ -142,7 +155,7 @@ def gen_new_pyg_graph(z, data, sampled_indices):
     # Sort and remove duplicate edges for undirected graph
     edge_index = coalesce(edge_index, None, num_nodes=z_sampled_nodes.size(0))[0]
 
-    x = data.x[sampled_indices]
+
     pos = data.pos[sampled_indices]
     new_graph = Data(x= x, edge_index=edge_index, pos=pos)
 

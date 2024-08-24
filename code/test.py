@@ -214,32 +214,50 @@ import pickle
 # # Optionally close the figure to free up memory
 # plt.close(fig)
 
+# import torch
+
+# def replace_top_x_with_1_ignore_diag(mat, x):
+#     # Clone the original matrix to avoid in-place modifications
+#     result = torch.zeros_like(mat)
+    
+#     # Create a mask to ignore diagonal elements
+#     diag_mask = torch.eye(mat.size(0), mat.size(1), device=mat.device).bool()
+    
+#     # Apply the mask to set diagonal elements to -inf, so they are not considered
+#     masked_mat = mat.masked_fill(diag_mask, float('-inf'))
+    
+#     # Get the top x indices along each row ignoring diagonal
+#     top_x_indices = torch.topk(masked_mat, x, dim=1).indices
+    
+#     # Scatter 1s into the result tensor at the top x indices
+#     result.scatter_(1, top_x_indices, 1)
+    
+#     return result
+
+# # Example usage
+# mat = torch.tensor([[0.1, 0.3, 0.6, 0.9],
+#                     [0.5, 0.2, 0.7, 0.1],
+#                     [0.8, 0.6, 0.4, 0.2],
+#                     [0.9, 0.5, 0.3, 0.98]])
+
+# x = 2  # Number of highest values to replace with 1
+# result = replace_top_x_with_1_ignore_diag(mat, x)
+# print(result)
+
 import torch
 
-def replace_top_x_with_1_ignore_diag(mat, x):
-    # Clone the original matrix to avoid in-place modifications
-    result = torch.zeros_like(mat)
-    
-    # Create a mask to ignore diagonal elements
-    diag_mask = torch.eye(mat.size(0), mat.size(1), device=mat.device).bool()
-    
-    # Apply the mask to set diagonal elements to -inf, so they are not considered
-    masked_mat = mat.masked_fill(diag_mask, float('-inf'))
-    
-    # Get the top x indices along each row ignoring diagonal
-    top_x_indices = torch.topk(masked_mat, x, dim=1).indices
-    
-    # Scatter 1s into the result tensor at the top x indices
-    result.scatter_(1, top_x_indices, 1)
-    
-    return result
+# Example tensor with n points in d-dimensional space
+coords = torch.tensor([
+    [0.1, 0.2],
+    [0.4, 0.4],
+    [0.8, 0.9]
+])  # This is a (3, 2) tensor for 3 points in 2D space
 
-# Example usage
-mat = torch.tensor([[0.1, 0.3, 0.6, 0.9],
-                    [0.5, 0.2, 0.7, 0.1],
-                    [0.8, 0.6, 0.4, 0.2],
-                    [0.9, 0.5, 0.3, 0.98]])
+# Compute pairwise distances
+# (n, d) -> (n, 1, d) and (1, n, d) to perform broadcasting subtraction
+diffs = coords.unsqueeze(1) - coords.unsqueeze(0)
 
-x = 2  # Number of highest values to replace with 1
-result = replace_top_x_with_1_ignore_diag(mat, x)
-print(result)
+# Square the differences, sum over the coordinate dimensions, and take the square root
+dist_matrix = torch.sqrt(torch.sum(diffs**2, dim=-1))
+
+print(dist_matrix)
