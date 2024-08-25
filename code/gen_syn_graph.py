@@ -139,6 +139,8 @@ def gen_new_pyg_graph(z, data, sampled_indices):
 
     A_prob = A_prob -  A_dist
 
+    # A_prob = torch.triu(A_prob)
+
     A_pred = replace_top_x_with_1_ignore_diag(A_prob, 2)
 
     # pred_edges = from_scipy_sparse_matrix(A_pred)
