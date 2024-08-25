@@ -19,6 +19,8 @@ import torch_geometric.transforms as T
 from torch_geometric.nn import GAE, VGAE, GCNConv
 import random
 from sklearn.metrics import average_precision_score, roc_auc_score
+import torch.nn.functional as F
+from ae_model import GCNEncoder, GCNEncoder12
 
 
 def main():
@@ -39,7 +41,7 @@ def main():
     ])
 
     train_data, val_data, test_data = transform(data)   
-    model = torch.load('./code/models/gae_model_v1.pth') #best with samplesize=10 and degree 2
+    model = torch.load('./code/models/gae_model_v1.2.pth') #best with samplesize=10 and degree 2
     # auc, ap = test(test_data, model)
     # print(f' AUC: {auc:.4f}, AP: {ap:.4f}')
 
@@ -53,7 +55,7 @@ def main():
     # print(z.size()[0])
 
     no_nodes = z.size(0)
-    sample_size = 50
+    sample_size = 100
     sampled_indices = random.sample(range(no_nodes), sample_size)
 
     # z_sampled_nodes = z[sampled_indices]
@@ -164,15 +166,15 @@ def gen_new_pyg_graph(z, data, sampled_indices):
     return new_graph
 
 
-class GCNEncoder(torch.nn.Module):
-    def __init__(self, in_channels, out_channels):
-        super().__init__()
-        self.conv1 = GCNConv(in_channels, 2 * out_channels)
-        self.conv2 = GCNConv(2 * out_channels, out_channels)
+# class GCNEncoder(torch.nn.Module):
+#     def __init__(self, in_channels, out_channels):
+#         super().__init__()
+#         self.conv1 = GCNConv(in_channels, 2 * out_channels)
+#         self.conv2 = GCNConv(2 * out_channels, out_channels)
 
-    def forward(self, x, edge_index):
-        x = self.conv1(x, edge_index).relu()
-        return self.conv2(x, edge_index)
+#     def forward(self, x, edge_index):
+#         x = self.conv1(x, edge_index).relu()
+#         return self.conv2(x, edge_index)
 
 @torch.no_grad()
 def test(data, model):

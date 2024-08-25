@@ -18,6 +18,7 @@ import torch_geometric.transforms as T
 # from torch_geometric.datasets import Planetoid
 from torch_geometric.nn import GAE, VGAE, GCNConv
 import random
+import torch.nn.functional as F
 
 def main():
 
@@ -25,15 +26,15 @@ def main():
     # file_path = './data/city_lat_long.csv'
     # distance = 500
     # l_netx_cities = get_networkx_data_from_coords(file_path, distance)
-    with open("./data/networkx_cities_graph/ccs_cities_graphs_wo_edge_a.pkl", "rb") as f:
-        l_netx_cities = pickle.load(f)
+    # with open("./data/networkx_cities_graph/ccs_cities_graphs_wo_edge_a.pkl", "rb") as f:
+    #     l_netx_cities = pickle.load(f)
 
     # ox.plot_graph(l_netx_cities[0])
     # print(type(l_netx_cities[0]))
     # pos = {e[0]:tuple(e[1]['x']) for e in l_netx_cities[0].nodes(data=True)}
     # nx.draw(l_netx_cities[0],pos=pos)
     # plt.show()
-  
+ ###########################################################initializing 
     # l_netx_cities = remove_edge_features(l_netx_cities)
     is_variational = False
     is_linear = False
@@ -58,24 +59,24 @@ def main():
     # with open("./data/tg_graphs/tg_graphs_all.pkl", "wb") as f:
     #     pickle.dump(data, f)
 
-##########################################################
+########################################################## testing
 
-    with open("./data/tg_graphs/tg_graphs_all.pkl", "rb") as f:
-        data = pickle.load(f)
+    # with open("./data/tg_graphs/tg_graphs_all.pkl", "rb") as f:
+    #     data = pickle.load(f)
 
-    # print(data.x[0:5])
-    data = select_random_nodes(data, 100)
-    print(len(data.x))
-    #test the saved model
-    model = torch.load('./code/models/gae_model_v1.pth')
+    # # print(data.x[0:5])
+    # data = select_random_nodes(data, 100)
+    # print(len(data.x))
+    # #test the saved model
+    # model = torch.load('./code/models/gae_model_v1.pth')
 
-    model.eval()
-    z = model.encode(data.x)
-    edge_index = model.decode(z)
-    print(edge_index)
+    # model.eval()
+    # z = model.encode(data.x)
+    # edge_index = model.decode(z)
+    # print(edge_index)
     # auc, ap = test(data, model)
     # print(f'AUC: {auc:.4f}, AP: {ap:.4f}')
-
+#################################################################
     # print(data1.edge_index)
     # print(data2.edge_index)
     # print(data.edge_index)
@@ -97,26 +98,30 @@ def main():
     # elif is_variational and is_linear:
     #     model = VGAE(VariationalLinearEncoder(in_channels, out_channels))
 ###################################training
-    # train_data, val_data, test_data = transform(data)
-    # in_channels, out_channels = data.num_features, 16    
-    # if not is_variational and not is_linear:
-    #     model = GAE(GCNEncoder(in_channels, out_channels))
 
-    # model = model.to(device)
-    # optimizer = torch.optim.Adam(model.parameters(), lr=0.01)
-    # times = []
-    # for epoch in range(1, iteration + 1):
-    #     start = time.time()
-    #     loss = train(model, optimizer, train_data, is_variational)
-    #     auc, ap = test(test_data, model)
-    #     print(f'Epoch: {epoch:03d}, AUC: {auc:.4f}, AP: {ap:.4f}')
-    #     times.append(time.time() - start)
-    # print(f"Median time per epoch: {torch.tensor(times).median():.4f}s")
+    with open("./data/tg_graphs/tg_graphs_all.pkl", "rb") as f:
+        data = pickle.load(f)
+
+    train_data, val_data, test_data = transform(data)
+    in_channels, out_channels = data.num_features, 16    
+    if not is_variational and not is_linear:
+        model = GAE(GCNEncoder12(in_channels, out_channels))
+
+    model = model.to(device)
+    optimizer = torch.optim.Adam(model.parameters(), lr=0.01)
+    times = []
+    for epoch in range(1, iteration + 1):
+        start = time.time()
+        loss = train(model, optimizer, train_data, is_variational)
+        auc, ap = test(test_data, model)
+        print(f'Epoch: {epoch:03d}, AUC: {auc:.4f}, AP: {ap:.4f}')
+        times.append(time.time() - start)
+    print(f"Median time per epoch: {torch.tensor(times).median():.4f}s")
 ###################################################
     # save the model
-    # torch.save(model, './code/models/gae_model_v1.pth')  Epoch: 200, AUC: 0.8713, AP: 0.8252
+    torch.save(model, './code/models/gae_model_v1.2.pth') # Epoch: 200, AUC: 0.8713, AP: 0.8252
 
-
+#####################################################
 
 
 def select_random_nodes(data: Data, num_nodes: int) -> Data:
@@ -163,6 +168,37 @@ class GCNEncoder(torch.nn.Module):
     def forward(self, x, edge_index):
         x = self.conv1(x, edge_index).relu()
         return self.conv2(x, edge_index)
+
+class GCNEncoder12(torch.nn.Module):
+    def __init__(self, input_dim=2, hidden_dim=16, output_dim=64, num_layers=3):
+        super(GCNEncoder12, self).__init__()
+        
+        self.num_layers = num_layers
+        
+        # Define the first GCN layer (input -> hidden)
+        self.convs = torch.nn.ModuleList()
+        self.convs.append(GCNConv(input_dim, hidden_dim))
+        
+        # Define additional hidden layers
+        for _ in range(num_layers - 2):
+            self.convs.append(GCNConv(hidden_dim, hidden_dim))
+        
+        # Define the final GCN layer (hidden -> output)
+        self.convs.append(GCNConv(hidden_dim, output_dim))
+        
+        # Optional: Apply dropout between layers for regularization
+        self.dropout = torch.nn.Dropout(p=0.5)
+    
+    def forward(self, x, edge_index):
+        # Pass through each GCN layer with ReLU activation
+        for i in range(self.num_layers - 1):
+            x = F.relu(self.convs[i](x, edge_index))
+            x = self.dropout(x)
+        
+        # The final layer typically doesn't have an activation function
+        x = self.convs[-1](x, edge_index)
+        
+        return x
 
 def train(model, optimizer, train_data, is_variational):
     model.train()
