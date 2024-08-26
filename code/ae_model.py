@@ -16,7 +16,7 @@ import time
 import torch
 import torch_geometric.transforms as T
 # from torch_geometric.datasets import Planetoid
-from torch_geometric.nn import GAE, VGAE, GCNConv, GATConv
+from torch_geometric.nn import GAE, VGAE, GCNConv, GATConv, SAGEConv
 import random
 import torch.nn.functional as F
 
@@ -105,7 +105,7 @@ def main():
     train_data, val_data, test_data = transform(data)
     in_channels, out_channels = data.num_features, 16    
     if not is_variational and not is_linear:
-        model = GAE(GATEncoder())
+        model = GAE(GraphSAGEEncoder())
         # model = GAE(GCNEncoder12(in_channels, out_channels))
 
     model = model.to(device)
@@ -120,7 +120,7 @@ def main():
     print(f"Median time per epoch: {torch.tensor(times).median():.4f}s")
 ###################################################
     # save the model
-    # torch.save(model, './code/models/gae_gat_model_v1.pth') # Epoch: 200, AUC: 0.8713, AP: 0.8252
+    torch.save(model, './code/models/gae_sage_model_v1.pth') # Epoch: 200, AUC: 0.8713, AP: 0.8252
 
 #####################################################
 
@@ -228,6 +228,36 @@ class GATEncoder(torch.nn.Module):
         
         # The final layer
         x = self.gats[-1](x, edge_index)
+        
+        return x
+
+class GraphSAGEEncoder(torch.nn.Module):
+    def __init__(self, input_dim=2, hidden_dim=16, output_dim=64, num_layers=3):
+        super(GraphSAGEEncoder, self).__init__()
+        
+        self.num_layers = num_layers
+        
+        # First GraphSAGE layer
+        self.sages = torch.nn.ModuleList()
+        self.sages.append(SAGEConv(input_dim, hidden_dim))
+        
+        # Additional GraphSAGE layers
+        for _ in range(num_layers - 2):
+            self.sages.append(SAGEConv(hidden_dim, hidden_dim))
+        
+        # Final GraphSAGE layer
+        self.sages.append(SAGEConv(hidden_dim, output_dim))
+        
+        self.dropout = torch.nn.Dropout(p=0.5)
+    
+    def forward(self, x, edge_index):
+        # Pass through each GraphSAGE layer with ReLU activation
+        for i in range(self.num_layers - 1):
+            x = F.relu(self.sages[i](x, edge_index))
+            x = self.dropout(x)
+        
+        # The final layer
+        x = self.sages[-1](x, edge_index)
         
         return x
 

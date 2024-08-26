@@ -20,7 +20,7 @@ from torch_geometric.nn import GAE, VGAE, GCNConv
 import random
 from sklearn.metrics import average_precision_score, roc_auc_score
 import torch.nn.functional as F
-from ae_model import GCNEncoder, GCNEncoder12, GATEncoder
+from ae_model import GCNEncoder, GCNEncoder12, GATEncoder, GraphSAGEEncoder
 
 
 def main():
@@ -41,7 +41,7 @@ def main():
     ])
 
     train_data, val_data, test_data = transform(data)   
-    model = torch.load('./code/models/gae_gat_model_v1.pth') #best with samplesize=10 and degree 2
+    model = torch.load('./code/models/gae_sage_model_v1.pth') #best with samplesize=10 and degree 2
     # auc, ap = test(test_data, model)
     # print(f' AUC: {auc:.4f}, AP: {ap:.4f}')
 
@@ -55,7 +55,7 @@ def main():
     # print(z.size()[0])
 
     no_nodes = z.size(0)
-    sample_size = 50
+    sample_size = 100
     sampled_indices = random.sample(range(no_nodes), sample_size)
 
     # z_sampled_nodes = z[sampled_indices]
