@@ -23,6 +23,10 @@ test:
 ae_model:
 	python ./code/ae_model.py
 
+.PHONY: vae_model
+vae_model:
+	python ./code/vae_model.py
+
 .PHONY: gen_syn_graph
 gen_syn_graph:
 	python ./code/gen_syn_graph.py

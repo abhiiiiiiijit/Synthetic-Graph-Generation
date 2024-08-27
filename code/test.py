@@ -244,20 +244,67 @@ import pickle
 # result = replace_top_x_with_1_ignore_diag(mat, x)
 # print(result)
 
-import torch
+# import torch
 
-# Example tensor with n points in d-dimensional space
-coords = torch.tensor([
-    [0.1, 0.2],
-    [0.4, 0.4],
-    [0.8, 0.9]
-])  # This is a (3, 2) tensor for 3 points in 2D space
+# # Example tensor with n points in d-dimensional space
+# coords = torch.tensor([
+#     [0.1, 0.2],
+#     [0.4, 0.4],
+#     [0.8, 0.9]
+# ])  # This is a (3, 2) tensor for 3 points in 2D space
 
-# Compute pairwise distances
-# (n, d) -> (n, 1, d) and (1, n, d) to perform broadcasting subtraction
-diffs = coords.unsqueeze(1) - coords.unsqueeze(0)
+# # Compute pairwise distances
+# # (n, d) -> (n, 1, d) and (1, n, d) to perform broadcasting subtraction
+# diffs = coords.unsqueeze(1) - coords.unsqueeze(0)
   
-# Square the differences, sum over the coordinate dimensions, and take the square root
-dist_matrix = torch.sqrt(torch.sum(diffs**2, dim=-1))
+# # Square the differences, sum over the coordinate dimensions, and take the square root
+# dist_matrix = torch.sqrt(torch.sum(diffs**2, dim=-1))
 
-print(dist_matrix)
+# print(dist_matrix)
+
+import networkx as nx
+import matplotlib.pyplot as plt
+import osmnx as ox
+import random
+
+# Step 1: Define node coordinates
+nodes = {
+    0: (0, 0),
+    1: (1, 0),
+    2: (1, 1),
+    3: (0, 1),
+}
+
+# Step 2: Define edges with node indices
+edges = [(0, 1), (1, 2), (2, 3), (3, 0), (0, 2)]
+
+# Step 3: Create a NetworkX graph
+G = nx.Graph()
+for node, coord in nodes.items():
+    G.add_node(node, x=coord[0], y=coord[1])
+
+# Step 4: Randomly generate edge geometries
+for u, v in edges:
+    # Random edge shape: straight line, or a line with a midpoint
+    if random.random() > 0.5:
+        # Straight line
+        geom = [(nodes[u][0], nodes[u][1]), (nodes[v][0], nodes[v][1])]
+    else:
+        # Line with a midpoint (random perturbation)
+        mid_x = (nodes[u][0] + nodes[v][0]) / 2 + random.uniform(-0.1, 0.1)
+        mid_y = (nodes[u][1] + nodes[v][1]) / 2 + random.uniform(-0.1, 0.1)
+        geom = [(nodes[u][0], nodes[u][1]), (mid_x, mid_y), (nodes[v][0], nodes[v][1])]
+
+    # Add edge with geometry
+    G.add_edge(u, v, geometry=geom)
+
+# Step 5: Set the CRS to a generic value
+G.graph['crs'] = 'epsg:3857'
+
+# Step 6: Plot the graph using OSMNX
+fig, ax = ox.plot_graph(G, show=False, close=False)
+
+# Optionally, show the plot
+plt.show()
+
+
