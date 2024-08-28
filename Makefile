@@ -31,6 +31,10 @@ vae_model:
 gen_syn_graph:
 	python ./code/gen_syn_graph.py
 
+.PHONY: gen_syn_graph_vae
+gen_syn_graph_vae:
+	python ./code/gen_syn_graph_vae.py
+
 .PHONY: avenv
 avenv:
 	D:\Git\env\Scripts\Activate.ps1
