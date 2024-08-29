@@ -17,7 +17,7 @@ import numpy as np
 def main():
     #get the city population data > 100k
     # df_city_p = get_cities_w_pop_gt_100k()
-
+    # let visualise
     # city names list
     # cities = df_city_p['city'].to_list()
     # write the lat long of the cities
