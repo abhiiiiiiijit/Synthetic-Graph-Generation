@@ -12,7 +12,7 @@ import pickle
 from pyproj import Transformer
 # from pyproj import Proj, transform
 import numpy as np
-# cd let do it
+# cd let do it, need to import
 
 def main():
     #get the city population data > 100k
