@@ -337,6 +337,9 @@ distance = 500  # in meters
 # Step 2: Download the graph from OSMnx
 G = ox.graph_from_point(point, dist=distance, network_type='drive')
 
+# Step 3: Project the graph to EPSG:3857
+G = ox.project_graph(G, to_crs='EPSG:3857')
+
 G = ox.convert.to_undirected(G)
 
 # Step 3: Remove all edge attributes except 'geometry'
@@ -347,12 +350,15 @@ for u, v, k in G.edges(keys=True):
     # Update the edge data to retain only the geometry attribute
     nx.set_edge_attributes(G, {(u, v, k): {'geometry': geometry}})
 
-# for u, v, attrs in G.edges(data=True):
-#     # Access edge attributes:
+# for n, a in G.nodes(data=True):
+#     print(a)
 
-#     # weight = attrs.get('weight', None)  # Default to None if weight doesn't exist
-#     # color = attrs.get('color', None)  # Default to None if color doesn't exist
-#     print(f"Edge: ({u}, {v}), attributes={attrs}")
+for u, v, attrs in G.edges(data=True):
+    # Access edge attributes:
+
+    # weight = attrs.get('weight', None)  # Default to None if weight doesn't exist
+    # color = attrs.get('color', None)  # Default to None if color doesn't exist
+    print(f"Edge: ({u}, {v}), attributes={attrs}")
 
 # Step 4: Plot the graph
 fig, ax = ox.plot_graph(G, show=False, close=False)
