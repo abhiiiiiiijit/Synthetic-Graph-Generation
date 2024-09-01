@@ -37,8 +37,7 @@
 #     for row in csv_reader:
 #         print(type(row))
 
-import networkx as nx
-import pickle
+
 
 # # Example: Creating a list of graphs
 # G1 = nx.Graph()
@@ -262,49 +261,61 @@ import pickle
 
 # print(dist_matrix)
 
+# import networkx as nx
+# import matplotlib.pyplot as plt
+# import osmnx as ox
+# import random
+
+# # Step 1: Define node coordinates
+# nodes = {
+#     0: (0, 0),
+#     1: (1, 0),
+#     2: (1, 1),
+#     3: (0, 1),
+# }
+
+# # Step 2: Define edges with node indices
+# edges = [(0, 1), (1, 2), (2, 3), (3, 0), (0, 2)]
+
+# # Step 3: Create a NetworkX graph
+# G = nx.Graph()
+# for node, coord in nodes.items():
+#     G.add_node(node, x=coord[0], y=coord[1])
+
+# # Step 4: Randomly generate edge geometries
+# for u, v in edges:
+#     # Random edge shape: straight line, or a line with a midpoint
+#     if random.random() > 0.5:
+#         # Straight line
+#         geom = [(nodes[u][0], nodes[u][1]), (nodes[v][0], nodes[v][1])]
+#     else:
+#         # Line with a midpoint (random perturbation)
+#         mid_x = (nodes[u][0] + nodes[v][0]) / 2 + random.uniform(-0.1, 0.1)
+#         mid_y = (nodes[u][1] + nodes[v][1]) / 2 + random.uniform(-0.1, 0.1)
+#         geom = [(nodes[u][0], nodes[u][1]), (mid_x, mid_y), (nodes[v][0], nodes[v][1])]
+
+#     # Add edge with geometry
+#     G.add_edge(u, v, geometry=geom)
+
+# # Step 5: Set the CRS to a generic value
+# G.graph['crs'] = 'epsg:3857'
 import networkx as nx
-import matplotlib.pyplot as plt
+import pickle
+
 import osmnx as ox
-import random
+import matplotlib.pyplot as plt
+from gen_syn_graph import visualise_graph
 
-# Step 1: Define node coordinates
-nodes = {
-    0: (0, 0),
-    1: (1, 0),
-    2: (1, 1),
-    3: (0, 1),
-}
 
-# Step 2: Define edges with node indices
-edges = [(0, 1), (1, 2), (2, 3), (3, 0), (0, 2)]
+with open("./data/networkx_cities_graph/ccs_cities_graphs_wo_edge_a.pkl", "rb") as f:
+    l_netx_cities = pickle.load(f)
 
-# Step 3: Create a NetworkX graph
-G = nx.Graph()
-for node, coord in nodes.items():
-    G.add_node(node, x=coord[0], y=coord[1])
+G = l_netx_cities[0]
 
-# Step 4: Randomly generate edge geometries
-for u, v in edges:
-    # Random edge shape: straight line, or a line with a midpoint
-    if random.random() > 0.5:
-        # Straight line
-        geom = [(nodes[u][0], nodes[u][1]), (nodes[v][0], nodes[v][1])]
-    else:
-        # Line with a midpoint (random perturbation)
-        mid_x = (nodes[u][0] + nodes[v][0]) / 2 + random.uniform(-0.1, 0.1)
-        mid_y = (nodes[u][1] + nodes[v][1]) / 2 + random.uniform(-0.1, 0.1)
-        geom = [(nodes[u][0], nodes[u][1]), (mid_x, mid_y), (nodes[v][0], nodes[v][1])]
-
-    # Add edge with geometry
-    G.add_edge(u, v, geometry=geom)
-
-# Step 5: Set the CRS to a generic value
-G.graph['crs'] = 'epsg:3857'
-
+for node, data in G.nodes(data=True):
+    print(f"Node {node}: {data}")
 # Step 6: Plot the graph using OSMNX
-fig, ax = ox.plot_graph(G, show=False, close=False)
+# fig, ax = ox.plot_graph(G, show=False, close=False)
 
-# Optionally, show the plot
-plt.show()
-
-
+# # Optionally, show the plot
+# plt.show()
