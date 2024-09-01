@@ -23,6 +23,8 @@ def main():
     # write the lat long of the cities
     #   write_lat_long(cities)
 
+    # edege linestring
+
     #lets get network x data for all the graphs in a list
     file_path = './data/city_lat_long.csv'
     distance = 500
