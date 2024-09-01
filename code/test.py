@@ -307,15 +307,54 @@ import matplotlib.pyplot as plt
 from gen_syn_graph import visualise_graph
 
 
-with open("./data/networkx_cities_graph/ccs_cities_graphs_wo_edge_a.pkl", "rb") as f:
-    l_netx_cities = pickle.load(f)
+# with open("./data/networkx_cities_graph/ccs_cities_graphs.pkl", "rb") as f:
+#     l_netx_cities = pickle.load(f)
 
-G = l_netx_cities[0]
+# G = l_netx_cities[0]
 
-for node, data in G.nodes(data=True):
-    print(f"Node {node}: {data}")
+# for u, v, attrs in G.edges(data=True):
+#     # Access edge attributes:
+
+#     # weight = attrs.get('weight', None)  # Default to None if weight doesn't exist
+#     # color = attrs.get('color', None)  # Default to None if color doesn't exist
+#     print(f"Edge: ({u}, {v}), attributes={attrs['geometry']}")
+
+# for node, data in G.edges(data=True):
+#     print(f"Node {node}: {data}")
 # Step 6: Plot the graph using OSMNX
 # fig, ax = ox.plot_graph(G, show=False, close=False)
 
 # # Optionally, show the plot
 # plt.show()
+import osmnx as ox
+import networkx as nx
+import matplotlib.pyplot as plt
+
+# Step 1: Define a location (latitude, longitude) and set the distance
+point = (51.233334, 6.783333)#(37.7749, -122.4194)  # Example coordinates (San Francisco, CA)
+distance = 500  # in meters
+
+# Step 2: Download the graph from OSMnx
+G = ox.graph_from_point(point, dist=distance, network_type='drive')
+
+G = ox.convert.to_undirected(G)
+
+# Step 3: Remove all edge attributes except 'geometry'
+# Create a new edge attribute dictionary containing only 'geometry'
+for u, v, k in G.edges(keys=True):
+    geometry = G.edges[u, v, k].get('geometry')
+    G[u][v][k].clear() 
+    # Update the edge data to retain only the geometry attribute
+    nx.set_edge_attributes(G, {(u, v, k): {'geometry': geometry}})
+
+# for u, v, attrs in G.edges(data=True):
+#     # Access edge attributes:
+
+#     # weight = attrs.get('weight', None)  # Default to None if weight doesn't exist
+#     # color = attrs.get('color', None)  # Default to None if color doesn't exist
+#     print(f"Edge: ({u}, {v}), attributes={attrs}")
+
+# Step 4: Plot the graph
+fig, ax = ox.plot_graph(G, show=False, close=False)
+plt.show()
+
