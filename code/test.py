@@ -37,8 +37,7 @@
 #     for row in csv_reader:
 #         print(type(row))
 
-import networkx as nx
-import pickle
+
 
 # # Example: Creating a list of graphs
 # G1 = nx.Graph()
@@ -116,47 +115,47 @@ import pickle
 # for node, data in G_proj.nodes(data=True):
 #     print(f"Node {node}: x={data['x_norm']}, y={data['y_norm']}")
 
-import osmnx as ox
-import geopandas as gpd
-from shapely.geometry import Point
-import numpy as np
-# Define the central point and the distance (in meters)
-point = (37.7749, -122.4194)  # Example: San Francisco, CA
-distance = 500  # meters
+# import osmnx as ox
+# import geopandas as gpd
+# from shapely.geometry import Point
+# import numpy as np
+# # Define the central point and the distance (in meters)
+# point = (37.7749, -122.4194)  # Example: San Francisco, CA
+# distance = 500  # meters
 
-# Get the bounding box coordinates
-bbox = ox.utils_geo.bbox_from_point(point, dist=distance)
+# # Get the bounding box coordinates
+# bbox = ox.utils_geo.bbox_from_point(point, dist=distance)
 
-# bbox = ox.project_gdf(bbox)
+# # bbox = ox.project_gdf(bbox)
    
-# Unpack the bounding box coordinates
-north, south, east, west = bbox
+# # Unpack the bounding box coordinates
+# north, south, east, west = bbox
 
-# Project each corner of the bounding box to UTM
-west_south_utm = (west, south)
-east_south_utm = ( east, south)
-east_north_utm = ( east, north)
-west_north_utm = ( west, north)
+# # Project each corner of the bounding box to UTM
+# west_south_utm = (west, south)
+# east_south_utm = ( east, south)
+# east_north_utm = ( east, north)
+# west_north_utm = ( west, north)
 
-print(west_south_utm,east_north_utm)
+# print(west_south_utm,east_north_utm)
 
-# utm_coords_list = [north, south, east, west]
-utm_coords_list = [west_south_utm, east_north_utm,west_north_utm,east_south_utm]
+# # utm_coords_list = [north, south, east, west]
+# utm_coords_list = [west_south_utm, east_north_utm,west_north_utm,east_south_utm]
 
-# Define the UTM CRS (for example, UTM zone 10N)
-utm_crs = "EPSG:3857"
-# Retrieve the graph from the point
-G_proj = ox.graph_from_point(point, dist=distance, network_type='drive')
+# # Define the UTM CRS (for example, UTM zone 10N)
+# utm_crs = "EPSG:3857"
+# # Retrieve the graph from the point
+# G_proj = ox.graph_from_point(point, dist=distance, network_type='drive')
 
-G_proj = ox.project_graph(G_proj, to_crs='epsg:3857') 
+# G_proj = ox.project_graph(G_proj, to_crs='epsg:3857') 
 
-# Step 2: Extract x and y coordinates
-x_values = np.array([data['x'] for node, data in G_proj.nodes(data=True)])
-y_values = np.array([data['y'] for node, data in G_proj.nodes(data=True)])
+# # Step 2: Extract x and y coordinates
+# x_values = np.array([data['x'] for node, data in G_proj.nodes(data=True)])
+# y_values = np.array([data['y'] for node, data in G_proj.nodes(data=True)])
 
-# Step 3: Normalize the coordinates between 0 and 1
-x_min, x_max = x_values.min(), x_values.max()
-y_min, y_max = y_values.min(), y_values.max()
+# # Step 3: Normalize the coordinates between 0 and 1
+# x_min, x_max = x_values.min(), x_values.max()
+# y_min, y_max = y_values.min(), y_values.max()
 
 
 
@@ -213,4 +212,155 @@ y_min, y_max = y_values.min(), y_values.max()
 
 # # Optionally close the figure to free up memory
 # plt.close(fig)
+
+# import torch
+
+# def replace_top_x_with_1_ignore_diag(mat, x):
+#     # Clone the original matrix to avoid in-place modifications
+#     result = torch.zeros_like(mat)
+    
+#     # Create a mask to ignore diagonal elements
+#     diag_mask = torch.eye(mat.size(0), mat.size(1), device=mat.device).bool()
+    
+#     # Apply the mask to set diagonal elements to -inf, so they are not considered
+#     masked_mat = mat.masked_fill(diag_mask, float('-inf'))
+    
+#     # Get the top x indices along each row ignoring diagonal
+#     top_x_indices = torch.topk(masked_mat, x, dim=1).indices
+    
+#     # Scatter 1s into the result tensor at the top x indices
+#     result.scatter_(1, top_x_indices, 1)
+    
+#     return result
+
+# # Example usage
+# mat = torch.tensor([[0.1, 0.3, 0.6, 0.9],
+#                     [0.5, 0.2, 0.7, 0.1],
+#                     [0.8, 0.6, 0.4, 0.2],
+#                     [0.9, 0.5, 0.3, 0.98]])
+
+# x = 2  # Number of highest values to replace with 1
+# result = replace_top_x_with_1_ignore_diag(mat, x)
+# print(result)
+
+# import torch
+
+# # Example tensor with n points in d-dimensional space
+# coords = torch.tensor([
+#     [0.1, 0.2],
+#     [0.4, 0.4],
+#     [0.8, 0.9]
+# ])  # This is a (3, 2) tensor for 3 points in 2D space
+
+# # Compute pairwise distances
+# # (n, d) -> (n, 1, d) and (1, n, d) to perform broadcasting subtraction
+# diffs = coords.unsqueeze(1) - coords.unsqueeze(0)
+  
+# # Square the differences, sum over the coordinate dimensions, and take the square root
+# dist_matrix = torch.sqrt(torch.sum(diffs**2, dim=-1))
+
+# print(dist_matrix)
+
+# import networkx as nx
+# import matplotlib.pyplot as plt
+# import osmnx as ox
+# import random
+
+# # Step 1: Define node coordinates
+# nodes = {
+#     0: (0, 0),
+#     1: (1, 0),
+#     2: (1, 1),
+#     3: (0, 1),
+# }
+
+# # Step 2: Define edges with node indices
+# edges = [(0, 1), (1, 2), (2, 3), (3, 0), (0, 2)]
+
+# # Step 3: Create a NetworkX graph
+# G = nx.Graph()
+# for node, coord in nodes.items():
+#     G.add_node(node, x=coord[0], y=coord[1])
+
+# # Step 4: Randomly generate edge geometries
+# for u, v in edges:
+#     # Random edge shape: straight line, or a line with a midpoint
+#     if random.random() > 0.5:
+#         # Straight line
+#         geom = [(nodes[u][0], nodes[u][1]), (nodes[v][0], nodes[v][1])]
+#     else:
+#         # Line with a midpoint (random perturbation)
+#         mid_x = (nodes[u][0] + nodes[v][0]) / 2 + random.uniform(-0.1, 0.1)
+#         mid_y = (nodes[u][1] + nodes[v][1]) / 2 + random.uniform(-0.1, 0.1)
+#         geom = [(nodes[u][0], nodes[u][1]), (mid_x, mid_y), (nodes[v][0], nodes[v][1])]
+
+#     # Add edge with geometry
+#     G.add_edge(u, v, geometry=geom)
+
+# # Step 5: Set the CRS to a generic value
+# G.graph['crs'] = 'epsg:3857'
+import networkx as nx
+import pickle
+
+import osmnx as ox
+import matplotlib.pyplot as plt
+from gen_syn_graph import visualise_graph
+
+
+# with open("./data/networkx_cities_graph/ccs_cities_graphs.pkl", "rb") as f:
+#     l_netx_cities = pickle.load(f)
+
+# G = l_netx_cities[0]
+
+# for u, v, attrs in G.edges(data=True):
+#     # Access edge attributes:
+
+#     # weight = attrs.get('weight', None)  # Default to None if weight doesn't exist
+#     # color = attrs.get('color', None)  # Default to None if color doesn't exist
+#     print(f"Edge: ({u}, {v}), attributes={attrs['geometry']}")
+
+# for node, data in G.edges(data=True):
+#     print(f"Node {node}: {data}")
+# Step 6: Plot the graph using OSMNX
+# fig, ax = ox.plot_graph(G, show=False, close=False)
+
+# # Optionally, show the plot
+# plt.show()
+import osmnx as ox
+import networkx as nx
+import matplotlib.pyplot as plt
+
+# Step 1: Define a location (latitude, longitude) and set the distance
+point = (51.233334, 6.783333)#(37.7749, -122.4194)  # Example coordinates (San Francisco, CA)
+distance = 500  # in meters
+
+# Step 2: Download the graph from OSMnx
+G = ox.graph_from_point(point, dist=distance, network_type='drive')
+
+# Step 3: Project the graph to EPSG:3857
+G = ox.project_graph(G, to_crs='EPSG:3857')
+
+G = ox.convert.to_undirected(G)
+
+# Step 3: Remove all edge attributes except 'geometry'
+# Create a new edge attribute dictionary containing only 'geometry'
+for u, v, k in G.edges(keys=True):
+    geometry = G.edges[u, v, k].get('geometry')
+    G[u][v][k].clear() 
+    # Update the edge data to retain only the geometry attribute
+    nx.set_edge_attributes(G, {(u, v, k): {'geometry': geometry}})
+
+# for n, a in G.nodes(data=True):
+#     print(a)
+
+for u, v, attrs in G.edges(data=True):
+    # Access edge attributes:
+
+    # weight = attrs.get('weight', None)  # Default to None if weight doesn't exist
+    # color = attrs.get('color', None)  # Default to None if color doesn't exist
+    print(f"Edge: ({u}, {v}), attributes={attrs}")
+
+# Step 4: Plot the graph
+fig, ax = ox.plot_graph(G, show=False, close=False)
+plt.show()
 

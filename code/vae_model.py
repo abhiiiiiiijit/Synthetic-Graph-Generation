@@ -34,26 +34,7 @@ def main():
     # pos = {e[0]:tuple(e[1]['x']) for e in l_netx_cities[0].nodes(data=True)}
     # nx.draw(l_netx_cities[0],pos=pos)
     # plt.show()
- ###########################################################initializing 
-    # l_netx_cities = remove_edge_features(l_netx_cities)
-    is_variational = False
-    is_linear = False
-    iteration = 200
 
-    if torch.cuda.is_available():
-        device = torch.device('cuda')
-    elif hasattr(torch.backends, 'mps') and torch.backends.mps.is_available():
-        device = torch.device('mps')
-    else:
-        device = torch.device('cpu')
-    transform = T.Compose([
-        T.ToDevice(device),
-        T.RandomLinkSplit(num_val=0.05, num_test=0.1, is_undirected=True,
-                      split_labels=True, add_negative_train_samples=False),
-    ])
-
-
-#########################################################
 ##Save the graph
     # data = agg_all_graph(l_netx_cities)
     # with open("./data/tg_graphs/tg_graphs_all.pkl", "wb") as f:
@@ -97,6 +78,24 @@ def main():
     #     model = VGAE(VariationalGCNEncoder(in_channels, out_channels))
     # elif is_variational and is_linear:
     #     model = VGAE(VariationalLinearEncoder(in_channels, out_channels))
+ ###########################################################initializing 
+    # l_netx_cities = remove_edge_features(l_netx_cities)
+    is_variational = True
+    is_linear = False
+    iteration = 200
+
+    if torch.cuda.is_available():
+        device = torch.device('cuda')
+    elif hasattr(torch.backends, 'mps') and torch.backends.mps.is_available():
+        device = torch.device('mps')
+    else:
+        device = torch.device('cpu')
+    transform = T.Compose([
+        T.ToDevice(device),
+        T.RandomLinkSplit(num_val=0.05, num_test=0.1, is_undirected=True,
+                      split_labels=True, add_negative_train_samples=False),
+    ])
+
 ###################################training
 
     with open("./data/tg_graphs/tg_graphs_all.pkl", "rb") as f:
@@ -107,6 +106,9 @@ def main():
     if not is_variational and not is_linear:
         model = GAE(GraphSAGEEncoder())
         # model = GAE(GCNEncoder12(in_channels, out_channels))
+    elif is_variational and not is_linear:
+        model = VGAE(VGCNEncoder(in_channels, out_channels))
+
 
     model = model.to(device)
     optimizer = torch.optim.Adam(model.parameters(), lr=0.01)
@@ -120,7 +122,7 @@ def main():
     print(f"Median time per epoch: {torch.tensor(times).median():.4f}s")
 ###################################################
     # save the model
-    torch.save(model, './code/models/gae_sage_model_v1.pth') # Epoch: 200, AUC: 0.8713, AP: 0.8252
+    torch.save(model, './code/models/vgae_model_v1.pth') # Epoch: 200, AUC: 0.8713, AP: 0.8252
 
 #####################################################
 
@@ -160,17 +162,18 @@ def agg_all_graph(g_list):
         data1 = Data(x=x, edge_index=edge_index)
     return data1
 
-class GCNEncoder(torch.nn.Module):
+class VGCNEncoder(torch.nn.Module):
     def __init__(self, in_channels, out_channels):
         super().__init__()
         self.conv1 = GCNConv(in_channels, 2 * out_channels)
-        self.conv2 = GCNConv(2 * out_channels, out_channels)
+        self.conv_mu = GCNConv(2 * out_channels, out_channels)
+        self.conv_logstd = GCNConv(2 * out_channels, out_channels)
 
     def forward(self, x, edge_index):
         x = self.conv1(x, edge_index).relu()
-        return self.conv2(x, edge_index)
+        return self.conv_mu(x, edge_index), self.conv_logstd(x, edge_index)
 
-class GCNEncoder12(torch.nn.Module):
+class GCNEncoder12(torch.nn.Module):#has 64 dim z space
     def __init__(self, input_dim=2, hidden_dim=16, output_dim=64, num_layers=3):
         super(GCNEncoder12, self).__init__()
         

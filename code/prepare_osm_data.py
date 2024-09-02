@@ -12,16 +12,18 @@ import pickle
 from pyproj import Transformer
 # from pyproj import Proj, transform
 import numpy as np
-# cd 
+# cd let do it, need to import
 
 def main():
     #get the city population data > 100k
     # df_city_p = get_cities_w_pop_gt_100k()
-
+    # let visualise
     # city names list
     # cities = df_city_p['city'].to_list()
     # write the lat long of the cities
     #   write_lat_long(cities)
+
+    # edege linestring
 
     #lets get network x data for all the graphs in a list
     file_path = './data/city_lat_long.csv'
