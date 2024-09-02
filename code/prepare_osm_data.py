@@ -15,20 +15,36 @@ import numpy as np
 # cd let do it, need to import
 
 def main():
-    #get the city population data > 100k
-    # df_city_p = get_cities_w_pop_gt_100k()
-    # let visualise
-    # city names list
-    # cities = df_city_p['city'].to_list()
-    # write the lat long of the cities
-    #   write_lat_long(cities)
+    write_networkx_graph = False
+    write_ll = False
+    normalise_coordinate = False
+    write_pyg_graph = False
+    distance = 500
+    precision = 2
+    country = "Germany"
+    base_file_path = "./data/"
+    
+    #get or write Longitude Latitude
+    if write_ll:
+        #get the city population data > 100k
+        df_city_p = get_cities_w_pop_gt_100k(base_file_path, country)
+        # city names list
+        cities = df_city_p['city'].to_list()
+        # write the lat long of the cities
+        write_lat_long(cities, country) #suffix: '_cities_pop.csv'
+    else: 
+        file_path = f'./data/{country}_cities_lat_long.csv'
+        pddf_lat_long = pd.read_csv(file_path, delimiter=',',header = None)
+        print(pddf_lat_long.head())
+        if pddf_lat_long.shape[0]>0:
+            print(f"Long and Latitude of {country} cities is working fine")
 
     # edege linestring
 
     #lets get network x data for all the graphs in a list
-    file_path = './data/city_lat_long.csv'
-    distance = 500
-    l_netx_cities = get_networkx_data_from_coords(file_path, distance)
+    # file_path = './data/city_lat_long.csv'
+
+    # l_netx_cities = get_networkx_data_from_coords(file_path, distance)
     # with open("./data/networkx_cities_graph/ccs_cities_graphs.pkl", "rb") as f:
     #     l_netx_cities = pickle.load(f)
 
@@ -117,9 +133,9 @@ def get_networkx_data_from_coords(file_path, distance=500):
     return l_netx_cities
 
 # takes lot of time to get the lat_long so I have written down a csv file
-def write_lat_long(cities):
+def write_lat_long(cities, country):
     lat_long = get_lat_long(cities)
-    file_path = './data/city_lat_long.csv'
+    file_path = f'./data/{country}_cities_lat_long.csv'
     with open(file_path, mode='w', newline='') as file:
         writer = csv.writer(file)
         writer.writerows(lat_long)
@@ -138,8 +154,8 @@ def get_lat_long(cities):
             # return None
     return cities_w_ll
 
-def get_cities_w_pop_gt_100k():
-    df_city_p = pd.read_csv('./data/Germany_cities_pop.csv',delimiter=';'
+def get_cities_w_pop_gt_100k(base_file_path, country):
+    df_city_p = pd.read_csv(base_file_path+country+ '_cities_pop.csv',delimiter=';'
                             ,encoding='ISO-8859-1',header=None)
     
     #drop other columns, only take the 2023 data
