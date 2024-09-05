@@ -39,6 +39,9 @@ def main():
         if pddf_lat_long.shape[0]>0:
             print(f"Long and Latitude of {country} cities is working fine")
 
+    if write_networkx_graph:
+        get_networkx_data_from_coords(file_path, distance)
+
     # edege linestring
 
     #lets get network x data for all the graphs in a list
