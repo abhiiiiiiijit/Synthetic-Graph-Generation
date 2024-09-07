@@ -25,23 +25,34 @@ def main():
     base_file_path = "./data/"
     
     #get or write Longitude Latitude
+    r_city_pop_file_path = base_file_path+ country + '_cities_pop.csv'
+    w_city_long_lat_file_path = f'./data/{country}_cities_lat_long.csv'
     if write_ll:
         #get the city population data > 100k
-        df_city_p = get_cities_w_pop_gt_100k(base_file_path, country)
+        df_city_p = get_cities_w_pop_gt_100k(r_city_pop_file_path, country)
         # city names list
         cities = df_city_p['city'].to_list()
         # write the lat long of the cities
         write_lat_long(cities, country) #suffix: '_cities_pop.csv'
     else: 
-        file_path = f'./data/{country}_cities_lat_long.csv'
-        pddf_lat_long = pd.read_csv(file_path, delimiter=',',header = None)
+        pddf_lat_long = pd.read_csv(w_city_long_lat_file_path, delimiter=',',header = None)
         print(pddf_lat_long.head())
         if pddf_lat_long.shape[0]>0:
             print(f"Long and Latitude of {country} cities is working fine")
+        else:
+            print(f"Something is wrong with {country} long latude code")
 
+    w_city_nx_file_path = base_file_path + f'networkx_cities_graph/{country}_ccs_cities_nx_graphs_d_{distance}.pkl'
     if write_networkx_graph:
-        get_networkx_data_from_coords(file_path, distance)
-
+        get_networkx_data_from_coords(w_city_long_lat_file_path,w_city_nx_file_path, distance, country)
+    else:
+        with open(w_city_nx_file_path, "rb") as f:
+            l_netx_cities = pickle.load(f)
+        print(l_netx_cities[0].nodes(data=True))
+        if bool(l_netx_cities):
+             print(f"networkx graphs section of {country} cities is working fine")
+        else:
+            print(f"Something is wrong with {country} networkx graphs section  code")           
     # edege linestring
 
     #lets get network x data for all the graphs in a list
@@ -67,12 +78,13 @@ def get_ccs_of_nodes(x, y, north, south, east, west):# returns list of (x, y)
     return [ x_ccs, y_ccs]
 
 
-def get_networkx_data_from_coords(file_path, distance=500):
+def get_networkx_data_from_coords(r_file_path, w_file_path, distance, country):
+    
     l_netx_cities = []
     l_city_coord = []
     try:
             
-        with open(file_path, mode='r') as file:
+        with open(r_file_path, mode='r') as file:
             cities_lat_long = csv.reader(file)
             for city in cities_lat_long:
                 l_city_coord.append(city)
@@ -131,7 +143,7 @@ def get_networkx_data_from_coords(file_path, distance=500):
         
 
     # return l_netx_cities
-    with open("./data/networkx_cities_graph/ccs_cities_graphs.pkl", "wb") as f:
+    with open(w_file_path, "wb") as f:
         pickle.dump(l_netx_cities, f)
     return l_netx_cities
 
@@ -157,8 +169,8 @@ def get_lat_long(cities):
             # return None
     return cities_w_ll
 
-def get_cities_w_pop_gt_100k(base_file_path, country):
-    df_city_p = pd.read_csv(base_file_path+country+ '_cities_pop.csv',delimiter=';'
+def get_cities_w_pop_gt_100k(r_file_path, country):
+    df_city_p = pd.read_csv(r_file_path,delimiter=';'
                             ,encoding='ISO-8859-1',header=None)
     
     #drop other columns, only take the 2023 data
