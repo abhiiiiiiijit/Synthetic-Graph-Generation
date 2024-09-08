@@ -53,7 +53,7 @@ def main():
              print(f"networkx graphs section of {country} cities is working fine")
         else:
             print(f"Something is wrong with {country} networkx graphs section  code")           
-    # edege linestring
+    # edege linestring this is how we do it
 
     #lets get network x data for all the graphs in a list
     # file_path = './data/city_lat_long.csv'
