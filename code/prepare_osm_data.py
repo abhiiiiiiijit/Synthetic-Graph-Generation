@@ -23,7 +23,8 @@ def main():
     precision = 2
     country = "Germany"
     base_file_path = "./data/"
-    
+    pyg_version = 1 # 1= wo_edge
+##### city name list >>>>>>>>>> lat long
     #get or write Longitude Latitude
     r_city_pop_file_path = base_file_path+ country + '_cities_pop.csv'
     w_city_long_lat_file_path = f'./data/{country}_cities_lat_long.csv'
@@ -42,7 +43,7 @@ def main():
             print(f"Long and Latitude of {country} cities is working fine")
         else:
             print(f"Something is wrong with {country} long latude code")
-
+###### lat, lon >>>>>>>> networkx
     w_city_nx_file_path = base_file_path + f'networkx_cities_graph/{country}_ccs_cities_nx_graphs_d_{distance}.pkl'
     if write_networkx_graph:
         l_netx_cities = get_networkx_data_from_coords(w_city_long_lat_file_path,w_city_nx_file_path, distance, country)
@@ -51,38 +52,75 @@ def main():
     else:
         with open(w_city_nx_file_path, "rb") as f:
             l_netx_cities = pickle.load(f)
-        print(l_netx_cities[0].nodes(data=True))
+        # print(l_netx_cities[0].nodes(data=True))
         # print(l_netx_cities[0].edges(data=True))
         if bool(l_netx_cities):
              print(f"networkx graphs section of {country} cities is working fine")
         else:
-            print(f"Something is wrong with {country} networkx graphs section  code")           
-    # edege linestring this is how we do it
+            print(f"Something is wrong with {country} networkx graphs section  code")  
 
-    #lets get network x data for all the graphs in a list
-    # file_path = './data/city_lat_long.csv'
+######  networkx >>>>>>>>>> py torch geo
+    w_city_pyg_file_path = base_file_path + f'tg_graphs/{country}_pyg_graphs_d_{distance}_v_{pyg_version}.pkl'
+    if write_pyg_graph:
+        with open(w_city_nx_file_path, "rb") as f:
+            l_netx_cities = pickle.load(f)
+        pyg_data = agg_all_graph(l_netx_cities)
+        with open(w_city_pyg_file_path, "wb") as f:
+            pickle.dump(pyg_data, f)
+        if bool(pyg_data):
+            print("pyg section working fine")
+    else:
+        with open(w_city_pyg_file_path, "rb") as f:
+            pyg_data = pickle.load(f)
+        print(pyg_data.x)
+        # print(l_netx_cities[0].edges(data=True))
+        if bool(pyg_data):
+             print(f"pyg graphs {pyg_version} section of {country} cities is working fine")
+        else:
+            print(f"Something is wrong with {country} pyg graphs {pyg_version}")  
+    
+#################################networkx >>>>>>>>>> py torch geo##########################################################
 
-    # l_netx_cities = get_networkx_data_from_coords(file_path, distance)
-    # with open("./data/networkx_cities_graph/ccs_cities_graphs.pkl", "rb") as f:
-    #     l_netx_cities = pickle.load(f)
+def agg_all_graph(g_list):
+    data1 = remove_edge_features(g_list[0])
+    # for u, v, key in data1.edges(keys=True):
+    #     data1.clear() 
+    data1 = from_networkx(data1)
+    
+    for i in range(1, len(g_list)):
+        data2 = remove_edge_features(g_list[i])
+        data2 = from_networkx(data2)
+        
+        # for u, v, key in data2.edges(keys=True):
+        #     data2.clear() 
+        x = torch.cat([data1.x, data2.x], dim=0)
+        edge_index = torch.cat([data1.edge_index, data2.edge_index + data1.num_nodes], dim=1)
+        data1 = Data(x=x, edge_index=edge_index)
+    return data1
 
-    # print(l_netx_cities[56].nodes(data=True))
-
-def get_ccs_of_nodes(x, y, north, south, east, west):# returns list of (x, y)
+def remove_edge_features(G):
+    for u, v, key in G.edges(keys=True):
+        G[u][v][key].clear() 
+    # with open("./data/networkx_cities_graph/ccs_cities_graphs_wo_edge_a.pkl", "wb") as f:
+    #      pickle.dump(graph_list, f)
+    return G
+##############################################################################
+def get_ccs_of_nodes(x, y, north, south, east, west, precision):# returns list of (x, y)
     transformer = Transformer.from_crs("EPSG:4326", "EPSG:3857",always_xy=True)
     # x_ccs, y_ccs = transformer.transform( x, y)
+    x_ccs, y_ccs = x, y
     x_min, y_min = transformer.transform( west, south)
     x_max, y_max = transformer.transform( east, north)
 
-#precison of 2, considering a nodes area to be 10m
-    x_ccs = round((x_ccs - x_min) / (x_max - x_min),2)
-    y_ccs = round((y_ccs - y_min) / (y_max - y_min),2)
+    #precison of 2, considering a nodes area to be 10m
+    x_ccs = round((x_ccs - x_min) / (x_max - x_min),precision)
+    y_ccs = round((y_ccs - y_min) / (y_max - y_min),precision)
 
     # print(x_ccs,y_ccs,x_min,y_min,x_max,y_max)
     return [ x_ccs, y_ccs]
 
 
-def get_networkx_data_from_coords(r_file_path, w_file_path, distance, country):
+def get_networkx_data_from_coords(r_file_path, w_file_path, distance, country, precision):
     
     l_netx_cities = []
     l_city_coord = []
@@ -124,7 +162,7 @@ def get_networkx_data_from_coords(r_file_path, w_file_path, distance, country):
                     if not (bool(node_data['x']) or bool(node_data['y'])):
                         nodes_to_remove.append(node)
                     else:
-                        G.nodes[node]['x'] = get_ccs_of_nodes(node_data['x'], node_data['y'], north, south, east, west) #[ node_data['x'],node_data['y']]
+                        G.nodes[node]['x'] = get_ccs_of_nodes(node_data['x'], node_data['y'], north, south, east, west, precision) #[ node_data['x'],node_data['y']]
                         for key in list(node_data.keys()):
                             if key != 'x':
                                 del node_data[key]
