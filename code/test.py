@@ -259,108 +259,125 @@
 # # Square the differences, sum over the coordinate dimensions, and take the square root
 # dist_matrix = torch.sqrt(torch.sum(diffs**2, dim=-1))
 
-# print(dist_matrix)
+# # print(dist_matrix)
 
+# # import networkx as nx
+# # import matplotlib.pyplot as plt
+# # import osmnx as ox
+# # import random
+
+# # # Step 1: Define node coordinates
+# # nodes = {
+# #     0: (0, 0),
+# #     1: (1, 0),
+# #     2: (1, 1),
+# #     3: (0, 1),
+# # }
+
+# # # Step 2: Define edges with node indices
+# # edges = [(0, 1), (1, 2), (2, 3), (3, 0), (0, 2)]
+
+# # # Step 3: Create a NetworkX graph
+# # G = nx.Graph()
+# # for node, coord in nodes.items():
+# #     G.add_node(node, x=coord[0], y=coord[1])
+
+# # # Step 4: Randomly generate edge geometries
+# # for u, v in edges:
+# #     # Random edge shape: straight line, or a line with a midpoint
+# #     if random.random() > 0.5:
+# #         # Straight line
+# #         geom = [(nodes[u][0], nodes[u][1]), (nodes[v][0], nodes[v][1])]
+# #     else:
+# #         # Line with a midpoint (random perturbation)
+# #         mid_x = (nodes[u][0] + nodes[v][0]) / 2 + random.uniform(-0.1, 0.1)
+# #         mid_y = (nodes[u][1] + nodes[v][1]) / 2 + random.uniform(-0.1, 0.1)
+# #         geom = [(nodes[u][0], nodes[u][1]), (mid_x, mid_y), (nodes[v][0], nodes[v][1])]
+
+# #     # Add edge with geometry
+# #     G.add_edge(u, v, geometry=geom)
+
+# # # Step 5: Set the CRS to a generic value
+# # G.graph['crs'] = 'epsg:3857'
+# import networkx as nx
+# import pickle
+
+# import osmnx as ox
+# import matplotlib.pyplot as plt
+# from gen_syn_graph import visualise_graph
+
+
+# # with open("./data/networkx_cities_graph/ccs_cities_graphs.pkl", "rb") as f:
+# #     l_netx_cities = pickle.load(f)
+
+# # G = l_netx_cities[0]
+
+# # for u, v, attrs in G.edges(data=True):
+# #     # Access edge attributes:
+
+# #     # weight = attrs.get('weight', None)  # Default to None if weight doesn't exist
+# #     # color = attrs.get('color', None)  # Default to None if color doesn't exist
+# #     print(f"Edge: ({u}, {v}), attributes={attrs['geometry']}")
+
+# # for node, data in G.edges(data=True):
+# #     print(f"Node {node}: {data}")
+# # Step 6: Plot the graph using OSMNX
+# # fig, ax = ox.plot_graph(G, show=False, close=False)
+
+# # # Optionally, show the plot
+# # plt.show()
+# import osmnx as ox
 # import networkx as nx
 # import matplotlib.pyplot as plt
-# import osmnx as ox
-# import random
 
-# # Step 1: Define node coordinates
-# nodes = {
-#     0: (0, 0),
-#     1: (1, 0),
-#     2: (1, 1),
-#     3: (0, 1),
-# }
+# # Step 1: Define a location (latitude, longitude) and set the distance
+# point = (51.233334, 6.783333)#(37.7749, -122.4194)  # Example coordinates (San Francisco, CA)
+# distance = 500  # in meters
 
-# # Step 2: Define edges with node indices
-# edges = [(0, 1), (1, 2), (2, 3), (3, 0), (0, 2)]
+# # Step 2: Download the graph from OSMnx
+# G = ox.graph_from_point(point, dist=distance, network_type='drive')
 
-# # Step 3: Create a NetworkX graph
-# G = nx.Graph()
-# for node, coord in nodes.items():
-#     G.add_node(node, x=coord[0], y=coord[1])
+# # Step 3: Project the graph to EPSG:3857
+# G = ox.project_graph(G, to_crs='EPSG:3857')
 
-# # Step 4: Randomly generate edge geometries
-# for u, v in edges:
-#     # Random edge shape: straight line, or a line with a midpoint
-#     if random.random() > 0.5:
-#         # Straight line
-#         geom = [(nodes[u][0], nodes[u][1]), (nodes[v][0], nodes[v][1])]
-#     else:
-#         # Line with a midpoint (random perturbation)
-#         mid_x = (nodes[u][0] + nodes[v][0]) / 2 + random.uniform(-0.1, 0.1)
-#         mid_y = (nodes[u][1] + nodes[v][1]) / 2 + random.uniform(-0.1, 0.1)
-#         geom = [(nodes[u][0], nodes[u][1]), (mid_x, mid_y), (nodes[v][0], nodes[v][1])]
+# G = ox.convert.to_undirected(G)
 
-#     # Add edge with geometry
-#     G.add_edge(u, v, geometry=geom)
+# # Step 3: Remove all edge attributes except 'geometry'
+# # Create a new edge attribute dictionary containing only 'geometry'
+# for u, v, k in G.edges(keys=True):
+#     geometry = G.edges[u, v, k].get('geometry')
+#     G[u][v][k].clear() 
+#     # Update the edge data to retain only the geometry attribute
+#     nx.set_edge_attributes(G, {(u, v, k): {'geometry': geometry}})
 
-# # Step 5: Set the CRS to a generic value
-# G.graph['crs'] = 'epsg:3857'
-import networkx as nx
-import pickle
-
-import osmnx as ox
-import matplotlib.pyplot as plt
-from gen_syn_graph import visualise_graph
-
-
-# with open("./data/networkx_cities_graph/ccs_cities_graphs.pkl", "rb") as f:
-#     l_netx_cities = pickle.load(f)
-
-# G = l_netx_cities[0]
+# # for n, a in G.nodes(data=True):
+# #     print(a)
 
 # for u, v, attrs in G.edges(data=True):
 #     # Access edge attributes:
 
 #     # weight = attrs.get('weight', None)  # Default to None if weight doesn't exist
 #     # color = attrs.get('color', None)  # Default to None if color doesn't exist
-#     print(f"Edge: ({u}, {v}), attributes={attrs['geometry']}")
+#     print(f"Edge: ({u}, {v}), attributes={attrs}")
 
-# for node, data in G.edges(data=True):
-#     print(f"Node {node}: {data}")
-# Step 6: Plot the graph using OSMNX
+# # Step 4: Plot the graph
 # fig, ax = ox.plot_graph(G, show=False, close=False)
-
-# # Optionally, show the plot
 # plt.show()
-import osmnx as ox
-import networkx as nx
-import matplotlib.pyplot as plt
+import pickle
 
-# Step 1: Define a location (latitude, longitude) and set the distance
-point = (51.233334, 6.783333)#(37.7749, -122.4194)  # Example coordinates (San Francisco, CA)
-distance = 500  # in meters
+distance = 500
+country = "Germany"
+out_feat_dim = 16
+pyg_version = 1 
+pyg_file_path = f'./data/tg_graphs/{country}_pyg_graphs_d_{distance}_v_{pyg_version}.pkl'
+pyg_file_path2 = "./data/tg_graphs/tg_graphs_all.pkl"
 
-# Step 2: Download the graph from OSMnx
-G = ox.graph_from_point(point, dist=distance, network_type='drive')
+with open(pyg_file_path, "rb") as f:
+    data = pickle.load(f)
 
-# Step 3: Project the graph to EPSG:3857
-G = ox.project_graph(G, to_crs='EPSG:3857')
+with open(pyg_file_path2, "rb") as f:
+    data2 = pickle.load(f)
 
-G = ox.convert.to_undirected(G)
 
-# Step 3: Remove all edge attributes except 'geometry'
-# Create a new edge attribute dictionary containing only 'geometry'
-for u, v, k in G.edges(keys=True):
-    geometry = G.edges[u, v, k].get('geometry')
-    G[u][v][k].clear() 
-    # Update the edge data to retain only the geometry attribute
-    nx.set_edge_attributes(G, {(u, v, k): {'geometry': geometry}})
-
-# for n, a in G.nodes(data=True):
-#     print(a)
-
-for u, v, attrs in G.edges(data=True):
-    # Access edge attributes:
-
-    # weight = attrs.get('weight', None)  # Default to None if weight doesn't exist
-    # color = attrs.get('color', None)  # Default to None if color doesn't exist
-    print(f"Edge: ({u}, {v}), attributes={attrs}")
-
-# Step 4: Plot the graph
-fig, ax = ox.plot_graph(G, show=False, close=False)
-plt.show()
-
+print(data.x)
+print(data2.x)

@@ -21,24 +21,19 @@ import random
 import torch.nn.functional as F
 
 def main():
-
-    #lets get network x data for all the graphs in a list
-    # file_path = './data/city_lat_long.csv'
-    # distance = 500
-    # l_netx_cities = get_networkx_data_from_coords(file_path, distance)
-    # with open("./data/networkx_cities_graph/ccs_cities_graphs_wo_edge_a.pkl", "rb") as f:
-    #     l_netx_cities = pickle.load(f)
-
-    # ox.plot_graph(l_netx_cities[0])
-    # print(type(l_netx_cities[0]))
-    # pos = {e[0]:tuple(e[1]['x']) for e in l_netx_cities[0].nodes(data=True)}
-    # nx.draw(l_netx_cities[0],pos=pos)
-    # plt.show()
- ###########################################################initializing 
-    # l_netx_cities = remove_edge_features(l_netx_cities)
+######initialization##################
     is_variational = False
     is_linear = False
     iteration = 200
+    distance = 500
+    precision = 2
+    country = "Germany"
+    out_feat_dim = 16
+    pyg_version = 1 
+    pyg_file_path = f'./data/tg_graphs/{country}_pyg_graphs_d_{distance}_v_{pyg_version}.pkl'
+    encoder_name = "gcn"
+    model_version = 1
+    write_model = False
 
     if torch.cuda.is_available():
         device = torch.device('cuda')
@@ -46,67 +41,34 @@ def main():
         device = torch.device('mps')
     else:
         device = torch.device('cpu')
+
+
     transform = T.Compose([
         T.ToDevice(device),
         T.RandomLinkSplit(num_val=0.05, num_test=0.1, is_undirected=True,
                       split_labels=True, add_negative_train_samples=False),
     ])
 
-
-#########################################################
-##Save the graph
-    # data = agg_all_graph(l_netx_cities)
-    # with open("./data/tg_graphs/tg_graphs_all.pkl", "wb") as f:
-    #     pickle.dump(data, f)
-
-########################################################## testing
-
-    # with open("./data/tg_graphs/tg_graphs_all.pkl", "rb") as f:
-    #     data = pickle.load(f)
-
-    # # print(data.x[0:5])
-    # data = select_random_nodes(data, 100)
-    # print(len(data.x))
-    # #test the saved model
-    # model = torch.load('./code/models/gae_model_v1.pth')
-
-    # model.eval()
-    # z = model.encode(data.x)
-    # edge_index = model.decode(z)
-    # print(edge_index)
-    # auc, ap = test(data, model)
-    # print(f'AUC: {auc:.4f}, AP: {ap:.4f}')
-#################################################################
-    # print(data1.edge_index)
-    # print(data2.edge_index)
-    # print(data.edge_index)
-
-    # print(data1.x[0],data1.x[-1])
-    # print(data2.x[0],data2.x[-1])
-    # print(data.x[0],data.x[-1])
-
-    # print(l_netx_cities[0].nodes(data=True))
-    # print(g1.pos_edge_label_index)
-    # print(g1.get_summary())
-
-    # print(data, train_data, val_data, test_data)
-
-    # elif not is_variational and is_linear:
-    #     model = GAE(LinearEncoder(in_channels, out_channels))
-    # elif is_variational and not is_linear:
-    #     model = VGAE(VariationalGCNEncoder(in_channels, out_channels))
-    # elif is_variational and is_linear:
-    #     model = VGAE(VariationalLinearEncoder(in_channels, out_channels))
-###################################training
-
-    with open("./data/tg_graphs/tg_graphs_all.pkl", "rb") as f:
+##################Load data#########################################################
+    with open(pyg_file_path, "rb") as f:
         data = pickle.load(f)
-
+    data.x = data.x.float()
     train_data, val_data, test_data = transform(data)
-    in_channels, out_channels = data.num_features, 16    
-    if not is_variational and not is_linear:
+    in_channels, out_channels = data.num_features, out_feat_dim    
+
+##########################training#############################################
+    # if not is_variational and not is_linear:
+    #     model = GAE(GraphSAGEEncoder())
+    #     # model = GAE(GCNEncoder12(in_channels, out_channels))
+
+    if encoder_name == "gcn":
+        model = GAE(GCNEncoder(in_channels, out_channels))
+    elif model_version == 1.2 and encoder_name == "gcn":
+        model = GAE(GCNEncoder12(in_channels, out_channels))
+    elif encoder_name == "gat":
+        model = GAE(GATEncoder())
+    elif encoder_name == "sage":
         model = GAE(GraphSAGEEncoder())
-        # model = GAE(GCNEncoder12(in_channels, out_channels))
 
     model = model.to(device)
     optimizer = torch.optim.Adam(model.parameters(), lr=0.01)
@@ -120,8 +82,13 @@ def main():
     print(f"Median time per epoch: {torch.tensor(times).median():.4f}s")
 ###################################################
     # save the model
-    torch.save(model, './code/models/gae_sage_model_v1.pth') # Epoch: 200, AUC: 0.8713, AP: 0.8252
-
+    if write_model:
+        torch.save(model, f'./code/models/gae_{encoder_name}_model_v{model_version}.pth') # Epoch: 200, AUC: 0.8713, AP: 0.8252
+        print(f'model gae {encoder_name} v {model_version} saved')
+    else:
+        model = torch.load(f'./code/models/gae_{encoder_name}_model_v{model_version}.pth')
+        if bool(model):
+            print(f"GAE model {encoder_name} v {model_version} loads sucessfully")
 #####################################################
 
 
@@ -295,3 +262,67 @@ def remove_edge_features(graph_list):
 
 if __name__ == "__main__":
     main()
+
+
+
+
+    #lets get network x data for all the graphs in a list
+    # file_path = './data/city_lat_long.csv'
+    # distance = 500
+    # l_netx_cities = get_networkx_data_from_coords(file_path, distance)
+    # with open("./data/networkx_cities_graph/ccs_cities_graphs_wo_edge_a.pkl", "rb") as f:
+    #     l_netx_cities = pickle.load(f)
+
+    # ox.plot_graph(l_netx_cities[0])
+    # print(type(l_netx_cities[0]))
+    # pos = {e[0]:tuple(e[1]['x']) for e in l_netx_cities[0].nodes(data=True)}
+    # nx.draw(l_netx_cities[0],pos=pos)
+    # plt.show()
+ ###########################################################initializing 
+    # l_netx_cities = remove_edge_features(l_netx_cities)
+
+
+#########################################################
+##Save the graph
+    # data = agg_all_graph(l_netx_cities)
+    # with open("./data/tg_graphs/tg_graphs_all.pkl", "wb") as f:
+    #     pickle.dump(data, f)
+
+########################################################## testing
+
+    # with open("./data/tg_graphs/tg_graphs_all.pkl", "rb") as f:
+    #     data = pickle.load(f)
+
+    # # print(data.x[0:5])
+    # data = select_random_nodes(data, 100)
+    # print(len(data.x))
+    # #test the saved model
+    # model = torch.load('./code/models/gae_model_v1.pth')
+
+    # model.eval()
+    # z = model.encode(data.x)
+    # edge_index = model.decode(z)
+    # print(edge_index)
+    # auc, ap = test(data, model)
+    # print(f'AUC: {auc:.4f}, AP: {ap:.4f}')
+#################################################################
+    # print(data1.edge_index)
+    # print(data2.edge_index)
+    # print(data.edge_index)
+
+    # print(data1.x[0],data1.x[-1])
+    # print(data2.x[0],data2.x[-1])
+    # print(data.x[0],data.x[-1])
+
+    # print(l_netx_cities[0].nodes(data=True))
+    # print(g1.pos_edge_label_index)
+    # print(g1.get_summary())
+
+    # print(data, train_data, val_data, test_data)
+
+    # elif not is_variational and is_linear:
+    #     model = GAE(LinearEncoder(in_channels, out_channels))
+    # elif is_variational and not is_linear:
+    #     model = VGAE(VariationalGCNEncoder(in_channels, out_channels))
+    # elif is_variational and is_linear:
+    #     model = VGAE(VariationalLinearEncoder(in_channels, out_channels))
