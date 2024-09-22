@@ -75,7 +75,7 @@ utm_crs = "EPSG:3857"
 # Retrieve the graph from the point
 G = ox.graph_from_point(point, dist=distance, network_type='drive')
 
-G_proj = ox.project_graph(G, to_crs='epsg:3857') 
+G_proj = ox.project_graph(G, to_crs='epsg:3857')
 
 # Step 2: Extract x and y coordinates
 x_values = np.array([data['x'] for node, data in G_proj.nodes(data=True)])
@@ -84,7 +84,6 @@ y_values = np.array([data['y'] for node, data in G_proj.nodes(data=True)])
 # Step 3: Normalize the coordinates between 0 and 1
 x_min, x_max = x_values.min(), x_values.max()
 y_min, y_max = y_values.min(), y_values.max()
-
 
 
 # # Create Point objects for each UTM tuple

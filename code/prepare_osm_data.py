@@ -17,7 +17,7 @@ import numpy as np
 def main():
     write_networkx_graph = False
     write_ll = False
-    normalise_coordinate = False
+    # normalise_coordinate = False
     write_pyg_graph = False
     distance = 500
     precision = 2
@@ -34,6 +34,7 @@ def main():
         cities = df_city_p['city'].to_list()
         # write the lat long of the cities
         write_lat_long(cities, country) #suffix: '_cities_pop.csv'
+        print('lat long written sucessfully')
     else: 
         pddf_lat_long = pd.read_csv(w_city_long_lat_file_path, delimiter=',',header = None)
         print(pddf_lat_long.head())
@@ -44,11 +45,14 @@ def main():
 
     w_city_nx_file_path = base_file_path + f'networkx_cities_graph/{country}_ccs_cities_nx_graphs_d_{distance}.pkl'
     if write_networkx_graph:
-        get_networkx_data_from_coords(w_city_long_lat_file_path,w_city_nx_file_path, distance, country)
+        l_netx_cities = get_networkx_data_from_coords(w_city_long_lat_file_path,w_city_nx_file_path, distance, country)
+        if bool(l_netx_cities):
+             print(f"Sucessfully written networkx graphs section of {country} cities")
     else:
         with open(w_city_nx_file_path, "rb") as f:
             l_netx_cities = pickle.load(f)
         print(l_netx_cities[0].nodes(data=True))
+        # print(l_netx_cities[0].edges(data=True))
         if bool(l_netx_cities):
              print(f"networkx graphs section of {country} cities is working fine")
         else:
@@ -66,7 +70,7 @@ def main():
 
 def get_ccs_of_nodes(x, y, north, south, east, west):# returns list of (x, y)
     transformer = Transformer.from_crs("EPSG:4326", "EPSG:3857",always_xy=True)
-    x_ccs, y_ccs = transformer.transform( x, y)
+    # x_ccs, y_ccs = transformer.transform( x, y)
     x_min, y_min = transformer.transform( west, south)
     x_max, y_max = transformer.transform( east, north)
 
@@ -98,6 +102,8 @@ def get_networkx_data_from_coords(r_file_path, w_file_path, distance, country):
 
                 G = ox.convert.to_undirected(G)
 
+                # project the whole graph
+                G = ox.project_graph(G, to_crs='epsg:3857')
                 # Get the bounding box coordinates
                 bbox = ox.utils_geo.bbox_from_point((lat, long), dist=distance)
                 
