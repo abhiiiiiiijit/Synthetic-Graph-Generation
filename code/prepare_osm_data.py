@@ -18,12 +18,12 @@ def main():
     write_networkx_graph = False
     write_ll = False
     # normalise_coordinate = False
-    write_pyg_graph = False
+    write_pyg_graph = True
     distance = 500
     precision = 2
     country = "Germany"
     base_file_path = "./data/"
-    pyg_version = 1 # 1= wo_edge
+    pyg_version = 2 # 1= wo_edge 2=w_edge
 ##### city name list >>>>>>>>>> lat long
     #get or write Longitude Latitude
     r_city_pop_file_path = base_file_path+ country + '_cities_pop.csv'
@@ -64,7 +64,10 @@ def main():
     if write_pyg_graph:
         with open(w_city_nx_file_path, "rb") as f:
             l_netx_cities = pickle.load(f)
-        pyg_data = agg_all_graph(l_netx_cities)
+        if pyg_version == 1:
+            pyg_data = agg_all_graph(l_netx_cities)
+        elif pyg_version == 2:
+            pyg_data = agg_all__pyg_graph_w_edge_attr(l_netx_cities)
         with open(w_city_pyg_file_path, "wb") as f:
             pickle.dump(pyg_data, f)
         if bool(pyg_data):
@@ -97,6 +100,29 @@ def agg_all_graph(g_list):
         edge_index = torch.cat([data1.edge_index, data2.edge_index + data1.num_nodes], dim=1)
         data1 = Data(x=x, edge_index=edge_index)
     return data1
+
+def agg_all__pyg_graph_w_edge_attr(g_list):
+    data1 = remove_edge_features(g_list[0])
+    data1 = from_networkx(data1)
+    data1 = add_edge_attr(data1)
+    data1 = Data(x=data1.x.float(), edge_index=data1.edge_index, edge_attr = data1.edge_attr.float())
+    for i in range(1, len(g_list)):
+        data2 = remove_edge_features(g_list[i])
+        data2 = from_networkx(data2)
+        data2 = add_edge_attr(data2)
+        x = torch.cat([data1.x, data2.x], dim=0)
+        edge_index = torch.cat([data1.edge_index, data2.edge_index + data1.num_nodes], dim=1)
+        edge_features = torch.cat([data1.edge_attr, data2.edge_attr], dim=0)
+        data1 = Data(x=x.float(), edge_index=edge_index, edge_attr = edge_features.float())
+    return data1
+
+def add_edge_attr(pyg_data):
+    x = pyg_data.x
+    distances = torch.cdist(x, x, p=2)
+    edge_index = pyg_data.edge_index # Assuming fully connected
+    edge_features = distances[edge_index[0], edge_index[1]]  # Extract distances for edges
+    data = Data(x=x, edge_index=edge_index, edge_attr=edge_features)
+    return data
 
 def remove_edge_features(G):
     for u, v, key in G.edges(keys=True):

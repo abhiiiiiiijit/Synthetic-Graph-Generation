@@ -363,21 +363,117 @@
 # # Step 4: Plot the graph
 # fig, ax = ox.plot_graph(G, show=False, close=False)
 # plt.show()
+# import pickle
+
+# distance = 500
+# country = "Germany"
+# out_feat_dim = 16
+# pyg_version = 1 
+# pyg_file_path = f'./data/tg_graphs/{country}_pyg_graphs_d_{distance}_v_{pyg_version}.pkl'
+# pyg_file_path2 = "./data/tg_graphs/tg_graphs_all.pkl"
+
+# with open(pyg_file_path, "rb") as f:
+#     data = pickle.load(f)
+
+# with open(pyg_file_path2, "rb") as f:
+#     data2 = pickle.load(f)
+
+
+# print(data.x)
+# print(data2.x)
+import pandas as pd
+from geopy.geocoders import Nominatim
+import time
+import osmnx as ox
+import matplotlib.pyplot as plt
+import csv
+import networkx as nx
+import torch
+from torch_geometric.data import Data
+from torch_geometric.utils import from_networkx
 import pickle
-
+from pyproj import Transformer
+# from pyproj import Proj, transform
+import numpy as np
+write_networkx_graph = False
+write_ll = False
+# normalise_coordinate = False
+write_pyg_graph = True
 distance = 500
+precision = 2
 country = "Germany"
-out_feat_dim = 16
-pyg_version = 1 
-pyg_file_path = f'./data/tg_graphs/{country}_pyg_graphs_d_{distance}_v_{pyg_version}.pkl'
-pyg_file_path2 = "./data/tg_graphs/tg_graphs_all.pkl"
-
-with open(pyg_file_path, "rb") as f:
-    data = pickle.load(f)
-
-with open(pyg_file_path2, "rb") as f:
-    data2 = pickle.load(f)
+base_file_path = "./data/"
+pyg_version = 1 # 1= wo_edge
 
 
-print(data.x)
-print(data2.x)
+
+def agg_all_graph(g_list):
+    data1 = remove_edge_features(g_list[0])
+    # for u, v, key in data1.edges(keys=True):
+    #     data1.clear() 
+    data1 = from_networkx(data1)
+    data1 = add_edge_attr(data1)
+    
+    for i in range(1, len(g_list)):
+        data2 = remove_edge_features(g_list[i])
+        data2 = from_networkx(data2)
+        data2 = add_edge_attr(data2)
+        # for u, v, key in data2.edges(keys=True):
+        #     data2.clear() 
+        x = torch.cat([data1.x, data2.x], dim=0)
+        edge_features = torch.cat([data1.edge_attr, data2.edge_attr], dim=0)
+        edge_index = torch.cat([data1.edge_index, data2.edge_index + data1.num_nodes], dim=1)
+        data1 = Data(x=x, edge_index=edge_index, edge_attr = edge_features)
+    return data1
+
+def add_edge_attr(pyg_data):
+    x = pyg_data.x
+    num_nodes = x.size(0)
+    distances = torch.cdist(x, x, p=2)
+
+    # Convert to edge index format (if you're using a fully connected graph, otherwise use your own edge indices)
+    edge_index = pyg_data.edge_index # Assuming fully connected
+    edge_features = distances[edge_index[0], edge_index[1]]  # Extract distances for edges
+    data = Data(x=x, edge_index=edge_index, edge_attr=edge_features)
+    return data
+def remove_edge_features(G):
+    for u, v, key in G.edges(keys=True):
+        G[u][v][key].clear() 
+    # with open("./data/networkx_cities_graph/ccs_cities_graphs_wo_edge_a.pkl", "wb") as f:
+    #      pickle.dump(graph_list, f)
+    return G
+
+
+w_city_nx_file_path = base_file_path + f'networkx_cities_graph/{country}_ccs_cities_nx_graphs_d_{distance}.pkl'
+w_city_pyg_file_path = base_file_path + f'tg_graphs/{country}_pyg_graphs_d_{distance}_v_{pyg_version}.pkl'
+if write_pyg_graph:
+    with open(w_city_nx_file_path, "rb") as f:
+        l_netx_cities = pickle.load(f)
+    # print(l_netx_cities[0].edges(data=True)) 
+    data = agg_all_graph(l_netx_cities)
+    print(data.x)
+    print(data.edge_index)
+    print(data.edge_attr)
+    # x = pyg_data.x
+    # num_nodes = x.size(0)
+    # distances = torch.cdist(x, x, p=2)
+
+    # # Convert to edge index format (if you're using a fully connected graph, otherwise use your own edge indices)
+    # edge_index = pyg_data.edge_index # Assuming fully connected
+    # edge_features = distances[edge_index[0], edge_index[1]]  # Extract distances for edges
+    # data = Data(x=x, edge_index=edge_index, edge_attr=edge_features)
+    # print(pyg_data.edge_index.size())
+    # print(pyg_data.edge_attr.size())
+    # with open(w_city_pyg_file_path, "wb") as f:
+    #     pickle.dump(pyg_data, f)
+    # if bool(pyg_data):
+    #     print("pyg section working fine")
+else:
+    with open(w_city_pyg_file_path, "rb") as f:
+        pyg_data = pickle.load(f)
+    print(pyg_data.x)
+    # print(l_netx_cities[0].edges(data=True))
+    if bool(pyg_data):
+            print(f"pyg graphs {pyg_version} section of {country} cities is working fine")
+    else:
+        print(f"Something is wrong with {country} pyg graphs {pyg_version}")
