@@ -7,7 +7,7 @@ import matplotlib.pyplot as plt
 import networkx as nx
 import torch
 from torch_geometric.data import Data
-from torch_geometric.utils import from_networkx
+from torch_geometric.utils import from_networkx, add_self_loops, degree
 import pickle
 # from pyproj import Transformer
 import torch_geometric.transforms as T
@@ -16,7 +16,7 @@ import time
 import torch
 import torch_geometric.transforms as T
 # from torch_geometric.datasets import Planetoid
-from torch_geometric.nn import GAE, VGAE, GCNConv, GATConv, SAGEConv
+from torch_geometric.nn import GAE, VGAE, GCNConv, GATConv, SAGEConv, MessagePassing
 import random
 import torch.nn.functional as F
 
@@ -29,11 +29,11 @@ def main():
     precision = 2
     country = "Germany"
     out_feat_dim = 16
-    pyg_version = 1 
+    pyg_version = 2
     pyg_file_path = f'./data/tg_graphs/{country}_pyg_graphs_d_{distance}_v_{pyg_version}.pkl'
     encoder_name = "gcn"
-    model_version = 1
-    write_model = False
+    model_version = 2
+    write_model = True
 
     if torch.cuda.is_available():
         device = torch.device('cuda')
@@ -56,6 +56,7 @@ def main():
     train_data, val_data, test_data = transform(data)
     in_channels, out_channels = data.num_features, out_feat_dim    
 
+
 ##########################training#############################################
     # if not is_variational and not is_linear:
     #     model = GAE(GraphSAGEEncoder())
@@ -65,6 +66,8 @@ def main():
         model = GAE(GCNEncoder(in_channels, out_channels))
     elif model_version == 1.2 and encoder_name == "gcn":
         model = GAE(GCNEncoder12(in_channels, out_channels))
+    elif model_version == 2 and encoder_name == "gcn":
+        model = GAE(GCNEncoder2(input_dim=in_channels, hidden_dim=64, latent_dim=32))    
     elif encoder_name == "gat":
         model = GAE(GATEncoder())
     elif encoder_name == "sage":
@@ -80,6 +83,7 @@ def main():
         print(f'Epoch: {epoch:03d}, AUC: {auc:.4f}, AP: {ap:.4f}')
         times.append(time.time() - start)
     print(f"Median time per epoch: {torch.tensor(times).median():.4f}s")
+    print(f'./data/tg_graphs/{country}_pyg_graphs_d_{distance}_v_{pyg_version}.pkl')
 ###################################################
     # save the model
     if write_model:
@@ -90,42 +94,6 @@ def main():
         if bool(model):
             print(f"GAE model {encoder_name} v {model_version} loads sucessfully")
 #####################################################
-
-
-def select_random_nodes(data: Data, num_nodes: int) -> Data:
-    # Check that the number of nodes to select is less than or equal to the total number of nodes
-    if num_nodes > data.num_nodes:
-        raise ValueError("num_nodes cannot be greater than the total number of nodes in the data.")
-
-    # Randomly select `num_nodes` indices from the available nodes
-    selected_nodes = random.sample(range(data.num_nodes), num_nodes)
-
-    # Create a mask to filter out the selected nodes
-    node_mask = torch.zeros(data.num_nodes, dtype=torch.bool)
-    node_mask[selected_nodes] = True
-
-    # Select the edges that connect the selected nodes
-    # edge_mask = node_mask[data.edge_index[0]] & node_mask[data.edge_index[1]]
-
-    # Create the new Data object with the selected nodes and edges
-    selected_data = Data(
-        x=data.x[node_mask],
-        # edge_index=data.edge_index[:, edge_mask],
-        # edge_attr=data.edge_attr[edge_mask] if data.edge_attr is not None else None,
-        # y=data.y[node_mask] if data.y is not None else None,
-        pos=data.x[node_mask] #if data.pos is not None else None
-    )
-
-    return selected_data
-
-def agg_all_graph(g_list):
-    data1 = from_networkx(g_list[0])
-    for i in range(1, len(g_list)):
-        data2 = from_networkx(g_list[i])
-        x = torch.cat([data1.x, data2.x], dim=0)
-        edge_index = torch.cat([data1.edge_index, data2.edge_index + data1.num_nodes], dim=1)
-        data1 = Data(x=x, edge_index=edge_index)
-    return data1
 
 class GCNEncoder(torch.nn.Module):
     def __init__(self, in_channels, out_channels):
@@ -165,6 +133,65 @@ class GCNEncoder12(torch.nn.Module):
         
         # The final layer typically doesn't have an activation function
         x = self.convs[-1](x, edge_index)
+        
+        return x
+
+####################################Version 2##############
+
+class EdgeGCNConv(MessagePassing):
+    def __init__(self, in_channels, out_channels):
+        super(EdgeGCNConv, self).__init__(aggr='add')  # "Add" aggregation
+        self.lin = torch.nn.Linear(in_channels, out_channels)
+        self.edge_lin = torch.nn.Linear(1, out_channels)  # Linear layer for edge features
+
+    def forward(self, x, edge_index, edge_attr):
+        # x has shape [N, in_channels]
+        # edge_index has shape [2, E]
+        # edge_attr has shape [E, 1] (edge features, like distances)
+
+        # Add self-loops to the adjacency matrix
+        edge_index, _ = add_self_loops(edge_index, num_nodes=x.size(0))
+
+        # Normalize edge weights based on degree
+        row, col = edge_index
+        deg = degree(col, x.size(0), dtype=x.dtype)
+        deg_inv_sqrt = deg.pow(-0.5)
+        norm = deg_inv_sqrt[row] * deg_inv_sqrt[col]
+
+        # Apply linear transformation to node features
+        x = self.lin(x)
+
+        # Propagate the message, which includes edge attributes
+        return self.propagate(edge_index, x=x, edge_attr=edge_attr, norm=norm)
+
+    def message(self, x_j, edge_attr, norm):
+        # x_j has shape [E, out_channels] (features of neighbors)
+        # edge_attr has shape [E, 1] (edge features)
+        # norm has shape [E] (normalized edge weight)
+
+        # Incorporate edge features into the message (e.g., scaling node messages by edge_attr)
+        edge_features_transformed = self.edge_lin(edge_attr)  # Shape: [E, out_channels]
+        return norm.view(-1, 1) * (x_j + edge_features_transformed)  # Adding node and edge features
+
+    def update(self, aggr_out):
+        # aggr_out has shape [N, out_channels]
+        return aggr_out
+
+class GCNEncoder2(torch.nn.Module):
+    def __init__(self, input_dim, hidden_dim, latent_dim):
+        super(GCNEncoder, self).__init__()
+        self.conv1 = EdgeGCNConv(input_dim, hidden_dim)
+        self.conv2 = EdgeGCNConv(hidden_dim, latent_dim)
+
+    def forward(self, data):
+        x, edge_index, edge_attr = data.x, data.edge_index, data.edge_attr
+        
+        # First graph convolution layer with edge features
+        x = self.conv1(x, edge_index, edge_attr)
+        x = F.relu(x)
+        
+        # Second graph convolution layer with edge features
+        x = self.conv2(x, edge_index, edge_attr)
         
         return x
 
@@ -264,6 +291,40 @@ if __name__ == "__main__":
     main()
 
 
+def select_random_nodes(data: Data, num_nodes: int) -> Data:
+    # Check that the number of nodes to select is less than or equal to the total number of nodes
+    if num_nodes > data.num_nodes:
+        raise ValueError("num_nodes cannot be greater than the total number of nodes in the data.")
+
+    # Randomly select `num_nodes` indices from the available nodes
+    selected_nodes = random.sample(range(data.num_nodes), num_nodes)
+
+    # Create a mask to filter out the selected nodes
+    node_mask = torch.zeros(data.num_nodes, dtype=torch.bool)
+    node_mask[selected_nodes] = True
+
+    # Select the edges that connect the selected nodes
+    # edge_mask = node_mask[data.edge_index[0]] & node_mask[data.edge_index[1]]
+
+    # Create the new Data object with the selected nodes and edges
+    selected_data = Data(
+        x=data.x[node_mask],
+        # edge_index=data.edge_index[:, edge_mask],
+        # edge_attr=data.edge_attr[edge_mask] if data.edge_attr is not None else None,
+        # y=data.y[node_mask] if data.y is not None else None,
+        pos=data.x[node_mask] #if data.pos is not None else None
+    )
+
+    return selected_data
+
+def agg_all_graph(g_list):
+    data1 = from_networkx(g_list[0])
+    for i in range(1, len(g_list)):
+        data2 = from_networkx(g_list[i])
+        x = torch.cat([data1.x, data2.x], dim=0)
+        edge_index = torch.cat([data1.edge_index, data2.edge_index + data1.num_nodes], dim=1)
+        data1 = Data(x=x, edge_index=edge_index)
+    return data1
 
 
     #lets get network x data for all the graphs in a list
