@@ -24,7 +24,7 @@ def main():
 ######initialization##################
     is_variational = False
     is_linear = False
-    iteration = 200
+    iteration = 20
     distance = 500
     precision = 2
     country = "Germany"
@@ -33,7 +33,7 @@ def main():
     pyg_file_path = f'./data/tg_graphs/{country}_pyg_graphs_d_{distance}_v_{pyg_version}.pkl'
     encoder_name = "gcn"
     model_version = 2
-    write_model = True
+    write_model = False
 
     if torch.cuda.is_available():
         device = torch.device('cuda')
@@ -75,12 +75,16 @@ def main():
 
     model = model.to(device)
     optimizer = torch.optim.Adam(model.parameters(), lr=0.01)
+    loss_fn = torch.nn.MSELoss()
     times = []
     for epoch in range(1, iteration + 1):
         start = time.time()
-        loss = train(model, optimizer, train_data, is_variational)
-        auc, ap = test(test_data, model)
-        print(f'Epoch: {epoch:03d}, AUC: {auc:.4f}, AP: {ap:.4f}')
+        train_loss = train(model, optimizer, train_data, loss_fn)  # Train on the training data
+        test_loss = test(test_data, model, loss_fn )  # Test on the test data
+        print(f'Epoch {epoch}, Train Loss: {train_loss:.4f}, Test Loss: {test_loss:.4f}')
+        # loss = train(model, optimizer, train_data, is_variational)
+        # auc, ap = test(test_data, model)
+        # print(f'Epoch: {epoch:03d}, AUC: {auc:.4f}, AP: {ap:.4f}')
         times.append(time.time() - start)
     print(f"Median time per epoch: {torch.tensor(times).median():.4f}s")
     print(f'./data/tg_graphs/{country}_pyg_graphs_d_{distance}_v_{pyg_version}.pkl')
@@ -255,28 +259,60 @@ class GraphSAGEEncoder(torch.nn.Module):
         
         return x
 
-def train(model, optimizer, train_data, is_variational):
+def train(model, optimizer, data, loss_fn):
     model.train()
     optimizer.zero_grad()
-    z = model.encode(train_data.x, train_data.edge_index)
-    loss = model.recon_loss(z, train_data.pos_edge_label_index)
-    # print(len(z))
-    # dc = torch.sigmoid( model.decode(z,train_data.edge_index))
-    # print(len(dc))
-    # print(dc)   
-    if is_variational:
-        loss = loss + (1 / train_data.num_nodes) * model.kl_loss()
+    
+    # Encode the graph structure
+    z = model.encode(data.x, data.edge_index, data.edge_attr)
+    
+    # Reconstruct the graph (e.g., edge_logits)
+    edge_logits = model.decoder(z, data.edge_index)
+    
+    # Compute the loss (e.g., reconstruction loss)
+    loss = loss_fn(edge_logits, data.edge_attr)  # Using edge features as the target
     loss.backward()
     optimizer.step()
-    return float(loss)
+    
+    return loss.item()
+
+@torch.no_grad()  # This decorator ensures no gradients are computed during testing
+def test(data, model, loss_fn ):
+    model.eval()  # Set the model to evaluation mode
+    
+    # Encode the graph structure
+    z = model.encode(data.x, data.edge_index, data.edge_attr)
+    
+    # Reconstruct the graph (e.g., predict the edge features)
+    edge_logits = model.decoder(z, data.edge_index)
+    
+    # Compute the reconstruction loss (comparing predicted edge features to true edge features)
+    loss = loss_fn(edge_logits, data.edge_attr)
+    
+    return loss.item()
+
+# def train(model, optimizer, train_data, is_variational):
+    # model.train()
+    # optimizer.zero_grad()
+    # z = model.encode(train_data.x, train_data.edge_index)
+    # loss = model.recon_loss(z, train_data.pos_edge_label_index)
+    # # print(len(z))
+    # # dc = torch.sigmoid( model.decode(z,train_data.edge_index))
+    # # print(len(dc))
+    # # print(dc)   
+    # if is_variational:
+    #     loss = loss + (1 / train_data.num_nodes) * model.kl_loss()
+    # loss.backward()
+    # optimizer.step()
+    # return float(loss)
 
 
-@torch.no_grad()
-def test(data, model):
-    model.eval()
-    z = model.encode(data.x, data.edge_index)
-    # print(z)
-    return model.test(z, data.pos_edge_label_index, data.neg_edge_label_index)
+# @torch.no_grad()
+# def test(data, model):
+    # model.eval()
+    # z = model.encode(data.x, data.edge_index)
+    # # print(z)
+    # return model.test(z, data.pos_edge_label_index, data.neg_edge_label_index)
 
 def remove_edge_features(graph_list):
     for G in graph_list:

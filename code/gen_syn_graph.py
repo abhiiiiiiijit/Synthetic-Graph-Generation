@@ -20,7 +20,7 @@ from torch_geometric.nn import GAE, VGAE, GCNConv
 import random
 from sklearn.metrics import average_precision_score, roc_auc_score
 import torch.nn.functional as F
-from ae_model import GCNEncoder, GCNEncoder12, GATEncoder, GraphSAGEEncoder
+from ae_model import GCNEncoder, GCNEncoder12, GATEncoder, GraphSAGEEncoder, GCNEncoder2
 
 
 def main():
@@ -31,7 +31,7 @@ def main():
     pyg_version = 1 
     pyg_file_path = f'./data/tg_graphs/{country}_pyg_graphs_d_{distance}_v_{pyg_version}.pkl'
     encoder_name = "gcn"
-    model_version = 1
+    model_version = 2
     write_model = False
 
     if torch.cuda.is_available():
@@ -65,7 +65,7 @@ def main():
     # print(z.size()[0])
 
     no_nodes = z.size(0)
-    sample_size = 100
+    sample_size = 400
     sampled_indices = random.sample(range(no_nodes), sample_size)
 
     # z_sampled_nodes = z[sampled_indices]
@@ -84,7 +84,7 @@ def visualise_graph(data):
 
     # Visualize the graph
     plt.figure(figsize=(8, 8))
-    nx.draw(G, pos=data.pos, with_labels=True, node_color='lightblue', edge_color='gray', node_size=500, font_size=16)
+    nx.draw(G, pos=data.pos, with_labels=True, node_color='lightblue', edge_color='gray', node_size=50, font_size=5)
     plt.show()
 
 def replace_top_x_with_1_ignore_diag(mat, x):
