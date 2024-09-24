@@ -28,10 +28,10 @@ def main():
     distance = 500
     country = "Germany"
     out_feat_dim = 16
-    pyg_version = 1 
+    pyg_version = 1.2
     pyg_file_path = f'./data/tg_graphs/{country}_pyg_graphs_d_{distance}_v_{pyg_version}.pkl'
     encoder_name = "gcn"
-    model_version = 2
+    model_version = 1.1
     write_model = False
 
     if torch.cuda.is_available():
@@ -52,11 +52,17 @@ def main():
 
     train_data, val_data, test_data = transform(data)   
     model = torch.load(f'./code/models/gae_{encoder_name}_model_v{model_version}.pth')
+    print(pyg_file_path)
+    print(f'./code/models/gae_{encoder_name}_model_v{model_version}.pth')
+    
     # auc, ap = test(test_data, model)
     # print(f' AUC: {auc:.4f}, AP: {ap:.4f}')
 ##############################################################
     #Graph coordinate positions are saved here
-    data.pos = data.x
+    # if bool(data.pos):
+    #     pass
+    # else:
+    #     data.pos = data.x
     # print(data.x[0:3])
 
     model.eval()
@@ -65,7 +71,7 @@ def main():
     # print(z.size()[0])
 
     no_nodes = z.size(0)
-    sample_size = 400
+    sample_size = 200
     sampled_indices = random.sample(range(no_nodes), sample_size)
 
     # z_sampled_nodes = z[sampled_indices]
@@ -124,7 +130,7 @@ def gen_new_pyg_graph(z, data, sampled_indices):
 
     A_dist = create_dist_matrix(x)
 
-    A_prob = A_prob -  A_dist
+    # A_prob = A_prob -  A_dist
 
     # A_prob = torch.triu(A_prob)
 

@@ -18,12 +18,12 @@ def main():
     write_networkx_graph = False
     write_ll = False
     # normalise_coordinate = False
-    write_pyg_graph = True
+    write_pyg_graph = False
     distance = 500
     precision = 2
     country = "Germany"
     base_file_path = "./data/"
-    pyg_version = 2 # 1= wo_edge 2=w_edge
+    pyg_version = 1.2 # 1= wo_edge 2= w_edge # 1.1 nodefeat+edgefeat
 ##### city name list >>>>>>>>>> lat long
     #get or write Longitude Latitude
     r_city_pop_file_path = base_file_path+ country + '_cities_pop.csv'
@@ -68,6 +68,8 @@ def main():
             pyg_data = agg_all_graph(l_netx_cities)
         elif pyg_version == 2:
             pyg_data = agg_all__pyg_graph_w_edge_attr(l_netx_cities)
+        elif pyg_version == 1.2:
+            pyg_data = agg_all_pyg_graphs_v12(l_netx_cities)
         with open(w_city_pyg_file_path, "wb") as f:
             pickle.dump(pyg_data, f)
         if bool(pyg_data):
@@ -75,7 +77,7 @@ def main():
     else:
         with open(w_city_pyg_file_path, "rb") as f:
             pyg_data = pickle.load(f)
-        print(pyg_data.x)
+        print(pyg_data.edge_index.size())
         # print(l_netx_cities[0].edges(data=True))
         if bool(pyg_data):
              print(f"pyg graphs {pyg_version} section of {country} cities is working fine")
@@ -115,6 +117,56 @@ def agg_all__pyg_graph_w_edge_attr(g_list):
         edge_features = torch.cat([data1.edge_attr, data2.edge_attr], dim=0)
         data1 = Data(x=x.float(), edge_index=edge_index, edge_attr = edge_features.float())
     return data1
+
+def agg_all_pyg_graphs_v12(g_list):
+    data1 = remove_edge_features(g_list[0])
+    data1 = from_networkx(data1)
+    data1 = add_edge_attr_2_nodes(data1)
+    # data1 = Data(x=data1.x.float(), edge_index=data1.edge_index)
+    for i in range(1, len(g_list)):
+        data2 = remove_edge_features(g_list[i])
+        data2 = from_networkx(data2)
+        data2 = add_edge_attr_2_nodes(data2)
+        x = torch.cat([data1.x, data2.x], dim=0)
+        edge_index = torch.cat([data1.edge_index, data2.edge_index + data1.num_nodes], dim=1)
+        pos = torch.cat([data1.pos, data2.pos], dim=0)
+        data1 = Data(x=x, edge_index=edge_index, pos=pos )
+    return data1
+
+def add_edge_attr_2_nodes(pyg_data):
+    x = pyg_data.x
+    edge_index = pyg_data.edge_index
+    # Number of nodes
+    N = x.size(0)
+
+    # Initialize a tensor to store the sum of distances and number of neighbors
+    z_sum = torch.zeros(N, dtype=torch.float32)
+    neighbor_count = torch.zeros(N, dtype=torch.float32)
+
+    # Loop over all edges
+    for i in range(edge_index.size(1)):
+        src = edge_index[0, i]  # Source node index
+        dst = edge_index[1, i]  # Destination node index
+        
+        # Calculate the Euclidean distance between src and dst
+        dist = torch.norm(x[src] - x[dst], p=2)
+        
+        # Add distance to both source and destination node
+        z_sum[src] += dist
+        z_sum[dst] += dist
+        
+        # Increment neighbor count for both nodes
+        neighbor_count[src] += 1
+        neighbor_count[dst] += 1
+
+    # Avoid division by zero for isolated nodes
+    mean_distances = z_sum / neighbor_count
+    mean_distances[neighbor_count == 0] = 0  # Set to 0 for nodes with no neighbors
+
+        # Add the mean distance as the new feature z1
+    x_new = torch.cat([x, mean_distances.unsqueeze(1)], dim=1)
+    data = Data(x=x_new.float(), edge_index=edge_index, pos=x.float())
+    return data
 
 def add_edge_attr(pyg_data):
     x = pyg_data.x

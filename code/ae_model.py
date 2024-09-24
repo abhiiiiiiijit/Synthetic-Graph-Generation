@@ -24,16 +24,16 @@ def main():
 ######initialization##################
     is_variational = False
     is_linear = False
-    iteration = 20
+    iteration = 200
     distance = 500
     precision = 2
     country = "Germany"
-    out_feat_dim = 16
-    pyg_version = 2
+    out_feat_dim = 32
+    pyg_version = 1.2
     pyg_file_path = f'./data/tg_graphs/{country}_pyg_graphs_d_{distance}_v_{pyg_version}.pkl'
     encoder_name = "gcn"
-    model_version = 2
-    write_model = False
+    model_version = 1.1
+    write_model = True
 
     if torch.cuda.is_available():
         device = torch.device('cuda')
@@ -44,8 +44,9 @@ def main():
 
 
     transform = T.Compose([
+        # T.NormalizeFeatures(),
         T.ToDevice(device),
-        T.RandomLinkSplit(num_val=0.05, num_test=0.1, is_undirected=True,
+        T.RandomLinkSplit(num_val=0.0, num_test=0.1, is_undirected=False,
                       split_labels=True, add_negative_train_samples=False),
     ])
 
@@ -56,16 +57,24 @@ def main():
     train_data, val_data, test_data = transform(data)
     in_channels, out_channels = data.num_features, out_feat_dim    
 
-
+    print(train_data.pos_edge_label_index.size(),test_data.pos_edge_label_index.size(),test_data.neg_edge_label_index.size())
+    print(data.edge_index.size())
+    print(train_data.edge_index.size())
+    print(test_data.edge_index.size())
+    print(val_data.edge_index.size())
 ##########################training#############################################
     # if not is_variational and not is_linear:
     #     model = GAE(GraphSAGEEncoder())
     #     # model = GAE(GCNEncoder12(in_channels, out_channels))
 
-    if encoder_name == "gcn":
+    if encoder_name == "gcn" and model_version == 1:
         model = GAE(GCNEncoder(in_channels, out_channels))
+    elif encoder_name == "gcn" and model_version == 1.1:
+        model = GAE(GCNEncoder(in_channels, out_channels))
+        print("gcn 1.1")
     elif model_version == 1.2 and encoder_name == "gcn":
-        model = GAE(GCNEncoder12(in_channels, out_channels))
+        model = GAE(GCNEncoder12(input_dim=3, hidden_dim=64, output_dim=32, num_layers=3))
+        print(f'{encoder_name} and {model_version} and GCNEncoder 1.2')
     elif model_version == 2 and encoder_name == "gcn":
         model = GAE(GCNEncoder2(input_dim=in_channels, hidden_dim=64, latent_dim=32))    
     elif encoder_name == "gat":
@@ -79,12 +88,12 @@ def main():
     times = []
     for epoch in range(1, iteration + 1):
         start = time.time()
-        train_loss = train(model, optimizer, train_data, loss_fn)  # Train on the training data
-        test_loss = test(test_data, model, loss_fn )  # Test on the test data
-        print(f'Epoch {epoch}, Train Loss: {train_loss:.4f}, Test Loss: {test_loss:.4f}')
-        # loss = train(model, optimizer, train_data, is_variational)
-        # auc, ap = test(test_data, model)
-        # print(f'Epoch: {epoch:03d}, AUC: {auc:.4f}, AP: {ap:.4f}')
+        # train_loss = train(model, optimizer, train_data, loss_fn)  # Train on the training data
+        # test_loss = test(test_data, model, loss_fn )  # Test on the test data
+        # print(f'Epoch {epoch}, Train Loss: {train_loss:.4f}, Test Loss: {test_loss:.4f}')
+        loss = train(model, optimizer, train_data, is_variational)
+        auc, ap = test(test_data, model)
+        print(f'Epoch: {epoch:03d}, AUC: {auc:.4f}, AP: {ap:.4f}')
         times.append(time.time() - start)
     print(f"Median time per epoch: {torch.tensor(times).median():.4f}s")
     print(f'./data/tg_graphs/{country}_pyg_graphs_d_{distance}_v_{pyg_version}.pkl')
@@ -259,60 +268,60 @@ class GraphSAGEEncoder(torch.nn.Module):
         
         return x
 
-def train(model, optimizer, data, loss_fn):
+# def train(model, optimizer, data, loss_fn):
+#     model.train()
+#     optimizer.zero_grad()
+    
+#     # Encode the graph structure
+#     z = model.encode(data.x, data.edge_index, data.edge_attr)
+    
+#     # Reconstruct the graph (e.g., edge_logits)
+#     edge_logits = model.decoder(z, data.edge_index)
+    
+#     # Compute the loss (e.g., reconstruction loss)
+#     loss = loss_fn(edge_logits, data.edge_attr)  # Using edge features as the target
+#     loss.backward()
+#     optimizer.step()
+    
+#     return loss.item()
+
+# @torch.no_grad()  # This decorator ensures no gradients are computed during testing
+# def test(data, model, loss_fn ):
+#     model.eval()  # Set the model to evaluation mode
+    
+#     # Encode the graph structure
+#     z = model.encode(data.x, data.edge_index, data.edge_attr)
+    
+#     # Reconstruct the graph (e.g., predict the edge features)
+#     edge_logits = model.decoder(z, data.edge_index)
+    
+#     # Compute the reconstruction loss (comparing predicted edge features to true edge features)
+#     loss = loss_fn(edge_logits, data.edge_attr)
+    
+#     return loss.item()
+
+def train(model, optimizer, train_data, is_variational):
     model.train()
     optimizer.zero_grad()
-    
-    # Encode the graph structure
-    z = model.encode(data.x, data.edge_index, data.edge_attr)
-    
-    # Reconstruct the graph (e.g., edge_logits)
-    edge_logits = model.decoder(z, data.edge_index)
-    
-    # Compute the loss (e.g., reconstruction loss)
-    loss = loss_fn(edge_logits, data.edge_attr)  # Using edge features as the target
+    z = model.encode(train_data.x, train_data.edge_index)
+    loss = model.recon_loss(z, train_data.pos_edge_label_index)
+    # print(len(z))
+    # dc = torch.sigmoid( model.decode(z,train_data.edge_index))
+    # print(len(dc))
+    # print(dc)   
+    if is_variational:
+        loss = loss + (1 / train_data.num_nodes) * model.kl_loss()
     loss.backward()
     optimizer.step()
-    
-    return loss.item()
-
-@torch.no_grad()  # This decorator ensures no gradients are computed during testing
-def test(data, model, loss_fn ):
-    model.eval()  # Set the model to evaluation mode
-    
-    # Encode the graph structure
-    z = model.encode(data.x, data.edge_index, data.edge_attr)
-    
-    # Reconstruct the graph (e.g., predict the edge features)
-    edge_logits = model.decoder(z, data.edge_index)
-    
-    # Compute the reconstruction loss (comparing predicted edge features to true edge features)
-    loss = loss_fn(edge_logits, data.edge_attr)
-    
-    return loss.item()
-
-# def train(model, optimizer, train_data, is_variational):
-    # model.train()
-    # optimizer.zero_grad()
-    # z = model.encode(train_data.x, train_data.edge_index)
-    # loss = model.recon_loss(z, train_data.pos_edge_label_index)
-    # # print(len(z))
-    # # dc = torch.sigmoid( model.decode(z,train_data.edge_index))
-    # # print(len(dc))
-    # # print(dc)   
-    # if is_variational:
-    #     loss = loss + (1 / train_data.num_nodes) * model.kl_loss()
-    # loss.backward()
-    # optimizer.step()
-    # return float(loss)
+    return float(loss)
 
 
-# @torch.no_grad()
-# def test(data, model):
-    # model.eval()
-    # z = model.encode(data.x, data.edge_index)
-    # # print(z)
-    # return model.test(z, data.pos_edge_label_index, data.neg_edge_label_index)
+@torch.no_grad()
+def test(data, model):
+    model.eval()
+    z = model.encode(data.x, data.edge_index)
+    # print(z)
+    return model.test(z, data.pos_edge_label_index, data.neg_edge_label_index)
 
 def remove_edge_features(graph_list):
     for G in graph_list:

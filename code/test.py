@@ -379,101 +379,141 @@
 #     data2 = pickle.load(f)
 
 
-# print(data.x)
-# print(data2.x)
-import pandas as pd
-from geopy.geocoders import Nominatim
-import time
-import osmnx as ox
-import matplotlib.pyplot as plt
-import csv
-import networkx as nx
-import torch
-from torch_geometric.data import Data
-from torch_geometric.utils import from_networkx
-import pickle
-from pyproj import Transformer
-# from pyproj import Proj, transform
-import numpy as np
-write_networkx_graph = False
-write_ll = False
-# normalise_coordinate = False
-write_pyg_graph = True
-distance = 500
-precision = 2
-country = "Germany"
-base_file_path = "./data/"
-pyg_version = 1 # 1= wo_edge
+# # print(data.x)
+# # print(data2.x)
+# import pandas as pd
+# from geopy.geocoders import Nominatim
+# import time
+# import osmnx as ox
+# import matplotlib.pyplot as plt
+# import csv
+# import networkx as nx
+# import torch
+# from torch_geometric.data import Data
+# from torch_geometric.utils import from_networkx
+# import pickle
+# from pyproj import Transformer
+# # from pyproj import Proj, transform
+# import numpy as np
+# write_networkx_graph = False
+# write_ll = False
+# # normalise_coordinate = False
+# write_pyg_graph = True
+# distance = 500
+# precision = 2
+# country = "Germany"
+# base_file_path = "./data/"
+# pyg_version = 1 # 1= wo_edge
 
 
 
-def agg_all_graph(g_list):
-    data1 = remove_edge_features(g_list[0])
-    # for u, v, key in data1.edges(keys=True):
-    #     data1.clear() 
-    data1 = from_networkx(data1)
-    data1 = add_edge_attr(data1)
+# def agg_all_graph(g_list):
+#     data1 = remove_edge_features(g_list[0])
+#     # for u, v, key in data1.edges(keys=True):
+#     #     data1.clear() 
+#     data1 = from_networkx(data1)
+#     data1 = add_edge_attr(data1)
     
-    for i in range(1, len(g_list)):
-        data2 = remove_edge_features(g_list[i])
-        data2 = from_networkx(data2)
-        data2 = add_edge_attr(data2)
-        # for u, v, key in data2.edges(keys=True):
-        #     data2.clear() 
-        x = torch.cat([data1.x, data2.x], dim=0)
-        edge_features = torch.cat([data1.edge_attr, data2.edge_attr], dim=0)
-        edge_index = torch.cat([data1.edge_index, data2.edge_index + data1.num_nodes], dim=1)
-        data1 = Data(x=x, edge_index=edge_index, edge_attr = edge_features)
-    return data1
+#     for i in range(1, len(g_list)):
+#         data2 = remove_edge_features(g_list[i])
+#         data2 = from_networkx(data2)
+#         data2 = add_edge_attr(data2)
+#         # for u, v, key in data2.edges(keys=True):
+#         #     data2.clear() 
+#         x = torch.cat([data1.x, data2.x], dim=0)
+#         edge_features = torch.cat([data1.edge_attr, data2.edge_attr], dim=0)
+#         edge_index = torch.cat([data1.edge_index, data2.edge_index + data1.num_nodes], dim=1)
+#         data1 = Data(x=x, edge_index=edge_index, edge_attr = edge_features)
+#     return data1
 
-def add_edge_attr(pyg_data):
-    x = pyg_data.x
-    num_nodes = x.size(0)
-    distances = torch.cdist(x, x, p=2)
+# def add_edge_attr(pyg_data):
+#     x = pyg_data.x
+#     num_nodes = x.size(0)
+#     distances = torch.cdist(x, x, p=2)
 
-    # Convert to edge index format (if you're using a fully connected graph, otherwise use your own edge indices)
-    edge_index = pyg_data.edge_index # Assuming fully connected
-    edge_features = distances[edge_index[0], edge_index[1]]  # Extract distances for edges
-    data = Data(x=x, edge_index=edge_index, edge_attr=edge_features)
-    return data
-def remove_edge_features(G):
-    for u, v, key in G.edges(keys=True):
-        G[u][v][key].clear() 
-    # with open("./data/networkx_cities_graph/ccs_cities_graphs_wo_edge_a.pkl", "wb") as f:
-    #      pickle.dump(graph_list, f)
-    return G
+#     # Convert to edge index format (if you're using a fully connected graph, otherwise use your own edge indices)
+#     edge_index = pyg_data.edge_index # Assuming fully connected
+#     edge_features = distances[edge_index[0], edge_index[1]]  # Extract distances for edges
+#     data = Data(x=x, edge_index=edge_index, edge_attr=edge_features)
+#     return data
+# def remove_edge_features(G):
+#     for u, v, key in G.edges(keys=True):
+#         G[u][v][key].clear() 
+#     # with open("./data/networkx_cities_graph/ccs_cities_graphs_wo_edge_a.pkl", "wb") as f:
+#     #      pickle.dump(graph_list, f)
+#     return G
 
 
-w_city_nx_file_path = base_file_path + f'networkx_cities_graph/{country}_ccs_cities_nx_graphs_d_{distance}.pkl'
-w_city_pyg_file_path = base_file_path + f'tg_graphs/{country}_pyg_graphs_d_{distance}_v_{pyg_version}.pkl'
-if write_pyg_graph:
-    with open(w_city_nx_file_path, "rb") as f:
-        l_netx_cities = pickle.load(f)
-    # print(l_netx_cities[0].edges(data=True)) 
-    data = agg_all_graph(l_netx_cities)
-    print(data.x)
-    print(data.edge_index)
-    print(data.edge_attr)
-    # x = pyg_data.x
-    # num_nodes = x.size(0)
-    # distances = torch.cdist(x, x, p=2)
+# w_city_nx_file_path = base_file_path + f'networkx_cities_graph/{country}_ccs_cities_nx_graphs_d_{distance}.pkl'
+# w_city_pyg_file_path = base_file_path + f'tg_graphs/{country}_pyg_graphs_d_{distance}_v_{pyg_version}.pkl'
+# if write_pyg_graph:
+#     with open(w_city_nx_file_path, "rb") as f:
+#         l_netx_cities = pickle.load(f)
+#     # print(l_netx_cities[0].edges(data=True)) 
+#     data = agg_all_graph(l_netx_cities)
+#     print(data.x)
+#     print(data.edge_index)
+#     print(data.edge_attr)
+#     # x = pyg_data.x
+#     # num_nodes = x.size(0)
+#     # distances = torch.cdist(x, x, p=2)
 
-    # # Convert to edge index format (if you're using a fully connected graph, otherwise use your own edge indices)
-    # edge_index = pyg_data.edge_index # Assuming fully connected
-    # edge_features = distances[edge_index[0], edge_index[1]]  # Extract distances for edges
-    # data = Data(x=x, edge_index=edge_index, edge_attr=edge_features)
-    # print(pyg_data.edge_index.size())
-    # print(pyg_data.edge_attr.size())
-    # with open(w_city_pyg_file_path, "wb") as f:
-    #     pickle.dump(pyg_data, f)
-    # if bool(pyg_data):
-    #     print("pyg section working fine")
-else:
-    with open(w_city_pyg_file_path, "rb") as f:
-        pyg_data = pickle.load(f)
-    print(pyg_data.x)
-    # print(l_netx_cities[0].edges(data=True))
-    if bool(pyg_data):
-            print(f"pyg graphs {pyg_version} section of {country} cities is working fine")
-    else:
-        print(f"Something is wrong with {country} pyg graphs {pyg_version}")
+#     # # Convert to edge index format (if you're using a fully connected graph, otherwise use your own edge indices)
+#     # edge_index = pyg_data.edge_index # Assuming fully connected
+#     # edge_features = distances[edge_index[0], edge_index[1]]  # Extract distances for edges
+#     # data = Data(x=x, edge_index=edge_index, edge_attr=edge_features)
+#     # print(pyg_data.edge_index.size())
+#     # print(pyg_data.edge_attr.size())
+#     # with open(w_city_pyg_file_path, "wb") as f:
+#     #     pickle.dump(pyg_data, f)
+#     # if bool(pyg_data):
+#     #     print("pyg section working fine")
+# else:
+#     with open(w_city_pyg_file_path, "rb") as f:
+#         pyg_data = pickle.load(f)
+#     print(pyg_data.x)
+#     # print(l_netx_cities[0].edges(data=True))
+#     if bool(pyg_data):
+#             print(f"pyg graphs {pyg_version} section of {country} cities is working fine")
+#     else:
+#         print(f"Something is wrong with {country} pyg graphs {pyg_version}")
+
+
+import torch
+
+# Sample input: node coordinates (N, 2) and edge indices (2, E)
+x = torch.tensor([[1.0, 1.0], [2.0, 2.0], [3.0, 3.0], [4.0, 4.0]], dtype=torch.float32)  # Example node coordinates (N, 2)
+edge_index = torch.tensor([[0, 1, 2, 3, 0], [1, 2, 3, 0, 2]], dtype=torch.long)  # Example edge indices (2, E)
+
+# Number of nodes
+N = x.size(0)
+
+# Initialize a tensor to store the sum of distances and number of neighbors
+z_sum = torch.zeros(N, dtype=torch.float32)
+neighbor_count = torch.zeros(N, dtype=torch.float32)
+
+# Loop over all edges
+for i in range(edge_index.size(1)):
+    src = edge_index[0, i]  # Source node index
+    dst = edge_index[1, i]  # Destination node index
+    
+    # Calculate the Euclidean distance between src and dst
+    dist = torch.norm(x[src] - x[dst], p=2)
+    
+    # Add distance to both source and destination node
+    z_sum[src] += dist
+    z_sum[dst] += dist
+    
+    # Increment neighbor count for both nodes
+    neighbor_count[src] += 1
+    neighbor_count[dst] += 1
+
+# Avoid division by zero for isolated nodes
+mean_distances = z_sum / neighbor_count
+mean_distances[neighbor_count == 0] = 0  # Set to 0 for nodes with no neighbors
+
+# Add the mean distance as the new feature z1
+x_new = torch.cat([x, mean_distances.unsqueeze(1)], dim=1)
+
+print(x_new)
+
