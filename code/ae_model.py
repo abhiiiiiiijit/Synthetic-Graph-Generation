@@ -25,10 +25,10 @@ def main():
     is_variational = False
     is_linear = False
     iteration = 200
-    distance = 500
+    distance = 1000
     precision = 2
     country = "Germany"
-    out_feat_dim = 32
+    out_feat_dim = 64
     pyg_version = 1.2
     pyg_file_path = f'./data/tg_graphs/{country}_pyg_graphs_d_{distance}_v_{pyg_version}.pkl'
     encoder_name = "gcn"
@@ -46,7 +46,7 @@ def main():
     transform = T.Compose([
         # T.NormalizeFeatures(),
         T.ToDevice(device),
-        T.RandomLinkSplit(num_val=0.0, num_test=0.1, is_undirected=False,
+        T.RandomLinkSplit(num_val=0.0, num_test=0.2, is_undirected=False,
                       split_labels=True, add_negative_train_samples=False),
     ])
 

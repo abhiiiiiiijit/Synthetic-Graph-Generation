@@ -25,13 +25,14 @@ from ae_model import GCNEncoder, GCNEncoder12, GATEncoder, GraphSAGEEncoder, GCN
 
 def main():
 ######initialization##################
-    distance = 500
+    distance = 1000
     country = "Germany"
     out_feat_dim = 16
     pyg_version = 1.2
     pyg_file_path = f'./data/tg_graphs/{country}_pyg_graphs_d_{distance}_v_{pyg_version}.pkl'
     encoder_name = "gcn"
     model_version = 1.1
+
     write_model = False
 
     if torch.cuda.is_available():

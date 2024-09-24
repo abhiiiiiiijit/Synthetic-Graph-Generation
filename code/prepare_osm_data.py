@@ -15,15 +15,15 @@ import numpy as np
 # cd let do it, need to import
 
 def main():
-    write_networkx_graph = False
+    write_networkx_graph = True
     write_ll = False
     # normalise_coordinate = False
-    write_pyg_graph = False
-    distance = 500
-    precision = 2
+    write_pyg_graph = True
+    distance = 1000
+    precision = 4
     country = "Germany"
     base_file_path = "./data/"
-    pyg_version = 1.2 # 1= wo_edge 2= w_edge # 1.1 nodefeat+edgefeat
+    pyg_version = 1.2 # 1= wo_edge 2= w_edge # 1.2 nodefeat+edgefeat
 ##### city name list >>>>>>>>>> lat long
     #get or write Longitude Latitude
     r_city_pop_file_path = base_file_path+ country + '_cities_pop.csv'
@@ -46,7 +46,7 @@ def main():
 ###### lat, lon >>>>>>>> networkx
     w_city_nx_file_path = base_file_path + f'networkx_cities_graph/{country}_ccs_cities_nx_graphs_d_{distance}.pkl'
     if write_networkx_graph:
-        l_netx_cities = get_networkx_data_from_coords(w_city_long_lat_file_path,w_city_nx_file_path, distance, country)
+        l_netx_cities = get_networkx_data_from_coords(w_city_long_lat_file_path,w_city_nx_file_path, distance, country,precision)
         if bool(l_netx_cities):
              print(f"Sucessfully written networkx graphs section of {country} cities")
     else:
@@ -77,7 +77,7 @@ def main():
     else:
         with open(w_city_pyg_file_path, "rb") as f:
             pyg_data = pickle.load(f)
-        print(pyg_data.edge_index.size())
+        print(pyg_data.x)
         # print(l_netx_cities[0].edges(data=True))
         if bool(pyg_data):
              print(f"pyg graphs {pyg_version} section of {country} cities is working fine")
@@ -210,7 +210,7 @@ def get_networkx_data_from_coords(r_file_path, w_file_path, distance, country, p
                 l_city_coord.append(city)
         for city in l_city_coord:
             try:
-                lat, long, distance = round(float(city[0]), 5), round(float(city[1]), 5), distance
+                lat, long, distance = round(float(city[0]), precision), round(float(city[1]), precision), distance
             # 1. Obtain the graph from OpenStreetMap
 
                 G = ox.graph_from_point((lat, long), dist=distance, network_type='drive')
