@@ -15,51 +15,202 @@ import numpy as np
 # cd let do it, need to import
 
 def main():
-    #get the city population data > 100k
-    # df_city_p = get_cities_w_pop_gt_100k()
-    # let visualise
-    # city names list
-    # cities = df_city_p['city'].to_list()
-    # write the lat long of the cities
-    #   write_lat_long(cities)
+    write_networkx_graph = True
+    write_ll = False
+    # normalise_coordinate = False
+    write_pyg_graph = True
+    distance = 3000
+    precision = 6
+    country = "Germany"
+    base_file_path = "./data/"
+    pyg_version = 1.2 # 1= wo_edge 2= w_edge # 1.2 nodefeat+edgefeat
+##### city name list >>>>>>>>>> lat long
+    #get or write Longitude Latitude
+    r_city_pop_file_path = base_file_path+ country + '_cities_pop.csv'
+    w_city_long_lat_file_path = f'./data/{country}_cities_lat_long.csv'
+    if write_ll:
+        #get the city population data > 100k
+        df_city_p = get_cities_w_pop_gt_100k(r_city_pop_file_path, country)
+        # city names list
+        cities = df_city_p['city'].to_list()
+        # write the lat long of the cities
+        write_lat_long(cities, country) #suffix: '_cities_pop.csv'
+        print('lat long written sucessfully')
+    else: 
+        pddf_lat_long = pd.read_csv(w_city_long_lat_file_path, delimiter=',',header = None)
+        print(pddf_lat_long.head())
+        if pddf_lat_long.shape[0]>0:
+            print(f"Long and Latitude of {country} cities is working fine")
+        else:
+            print(f"Something is wrong with {country} long latude code")
+###### lat, lon >>>>>>>> networkx
+    w_city_nx_file_path = base_file_path + f'networkx_cities_graph/{country}_ccs_cities_nx_graphs_d_{distance}.pkl'
+    if write_networkx_graph:
+        l_netx_cities = get_networkx_data_from_coords(w_city_long_lat_file_path,w_city_nx_file_path, distance, country,precision)
+        if bool(l_netx_cities):
+             print(f"Sucessfully written networkx graphs section of {country} cities")
+    else:
+        with open(w_city_nx_file_path, "rb") as f:
+            l_netx_cities = pickle.load(f)
+        # print(l_netx_cities[0].nodes(data=True))
+        # print(l_netx_cities[0].edges(data=True))
+        if bool(l_netx_cities):
+             print(f"networkx graphs section of {country} cities is working fine")
+        else:
+            print(f"Something is wrong with {country} networkx graphs section  code")  
 
-    # edege linestring
+######  networkx >>>>>>>>>> py torch geo
+    w_city_pyg_file_path = base_file_path + f'tg_graphs/{country}_pyg_graphs_d_{distance}_v_{pyg_version}.pkl'
+    if write_pyg_graph:
+        with open(w_city_nx_file_path, "rb") as f:
+            l_netx_cities = pickle.load(f)
+        if pyg_version == 1:
+            pyg_data = agg_all_graph(l_netx_cities)
+        elif pyg_version == 2:
+            pyg_data = agg_all__pyg_graph_w_edge_attr(l_netx_cities)
+        elif pyg_version == 1.2:
+            pyg_data = agg_all_pyg_graphs_v12(l_netx_cities)
+        with open(w_city_pyg_file_path, "wb") as f:
+            pickle.dump(pyg_data, f)
+        if bool(pyg_data):
+            print("pyg section working fine")
+    else:
+        with open(w_city_pyg_file_path, "rb") as f:
+            pyg_data = pickle.load(f)
+        print(pyg_data.x)
+        # print(l_netx_cities[0].edges(data=True))
+        if bool(pyg_data):
+             print(f"pyg graphs {pyg_version} section of {country} cities is working fine")
+        else:
+            print(f"Something is wrong with {country} pyg graphs {pyg_version}")  
+    
+#################################networkx >>>>>>>>>> py torch geo##########################################################
 
-    #lets get network x data for all the graphs in a list
-    file_path = './data/city_lat_long.csv'
-    distance = 500
-    l_netx_cities = get_networkx_data_from_coords(file_path, distance)
-    # with open("./data/networkx_cities_graph/ccs_cities_graphs.pkl", "rb") as f:
-    #     l_netx_cities = pickle.load(f)
+def agg_all_graph(g_list):
+    data1 = remove_edge_features(g_list[0])
+    # for u, v, key in data1.edges(keys=True):
+    #     data1.clear() 
+    data1 = from_networkx(data1)
+    
+    for i in range(1, len(g_list)):
+        data2 = remove_edge_features(g_list[i])
+        data2 = from_networkx(data2)
+        
+        # for u, v, key in data2.edges(keys=True):
+        #     data2.clear() 
+        x = torch.cat([data1.x, data2.x], dim=0)
+        edge_index = torch.cat([data1.edge_index, data2.edge_index + data1.num_nodes], dim=1)
+        data1 = Data(x=x, edge_index=edge_index)
+    return data1
 
-    # print(l_netx_cities[56].nodes(data=True))
+def agg_all__pyg_graph_w_edge_attr(g_list):
+    data1 = remove_edge_features(g_list[0])
+    data1 = from_networkx(data1)
+    data1 = add_edge_attr(data1)
+    data1 = Data(x=data1.x.float(), edge_index=data1.edge_index, edge_attr = data1.edge_attr.float())
+    for i in range(1, len(g_list)):
+        data2 = remove_edge_features(g_list[i])
+        data2 = from_networkx(data2)
+        data2 = add_edge_attr(data2)
+        x = torch.cat([data1.x, data2.x], dim=0)
+        edge_index = torch.cat([data1.edge_index, data2.edge_index + data1.num_nodes], dim=1)
+        edge_features = torch.cat([data1.edge_attr, data2.edge_attr], dim=0)
+        data1 = Data(x=x.float(), edge_index=edge_index, edge_attr = edge_features.float())
+    return data1
 
-def get_ccs_of_nodes(x, y, north, south, east, west):# returns list of (x, y)
+def agg_all_pyg_graphs_v12(g_list):
+    data1 = remove_edge_features(g_list[0])
+    data1 = from_networkx(data1)
+    data1 = add_edge_attr_2_nodes(data1)
+    # data1 = Data(x=data1.x.float(), edge_index=data1.edge_index)
+    for i in range(1, len(g_list)):
+        data2 = remove_edge_features(g_list[i])
+        data2 = from_networkx(data2)
+        data2 = add_edge_attr_2_nodes(data2)
+        x = torch.cat([data1.x, data2.x], dim=0)
+        edge_index = torch.cat([data1.edge_index, data2.edge_index + data1.num_nodes], dim=1)
+        pos = torch.cat([data1.pos, data2.pos], dim=0)
+        data1 = Data(x=x, edge_index=edge_index, pos=pos )
+    return data1
+
+def add_edge_attr_2_nodes(pyg_data):
+    x = pyg_data.x
+    edge_index = pyg_data.edge_index
+    # Number of nodes
+    N = x.size(0)
+
+    # Initialize a tensor to store the sum of distances and number of neighbors
+    z_sum = torch.zeros(N, dtype=torch.float32)
+    neighbor_count = torch.zeros(N, dtype=torch.float32)
+
+    # Loop over all edges
+    for i in range(edge_index.size(1)):
+        src = edge_index[0, i]  # Source node index
+        dst = edge_index[1, i]  # Destination node index
+        
+        # Calculate the Euclidean distance between src and dst
+        dist = torch.norm(x[src] - x[dst], p=2)
+        
+        # Add distance to both source and destination node
+        z_sum[src] += dist
+        z_sum[dst] += dist
+        
+        # Increment neighbor count for both nodes
+        neighbor_count[src] += 1
+        neighbor_count[dst] += 1
+
+    # Avoid division by zero for isolated nodes
+    mean_distances = z_sum / neighbor_count
+    mean_distances[neighbor_count == 0] = 0  # Set to 0 for nodes with no neighbors
+
+        # Add the mean distance as the new feature z1
+    x_new = torch.cat([x, mean_distances.unsqueeze(1)], dim=1)
+    data = Data(x=x_new.float(), edge_index=edge_index, pos=x.float())
+    return data
+
+def add_edge_attr(pyg_data):
+    x = pyg_data.x
+    distances = torch.cdist(x, x, p=2)
+    edge_index = pyg_data.edge_index # Assuming fully connected
+    edge_features = distances[edge_index[0], edge_index[1]]  # Extract distances for edges
+    data = Data(x=x, edge_index=edge_index, edge_attr=edge_features)
+    return data
+
+def remove_edge_features(G):
+    for u, v, key in G.edges(keys=True):
+        G[u][v][key].clear() 
+    # with open("./data/networkx_cities_graph/ccs_cities_graphs_wo_edge_a.pkl", "wb") as f:
+    #      pickle.dump(graph_list, f)
+    return G
+##############################################################################
+def get_ccs_of_nodes(x, y, north, south, east, west, precision):# returns list of (x, y)
     transformer = Transformer.from_crs("EPSG:4326", "EPSG:3857",always_xy=True)
-    x_ccs, y_ccs = transformer.transform( x, y)
+    # x_ccs, y_ccs = transformer.transform( x, y)
+    x_ccs, y_ccs = x, y
     x_min, y_min = transformer.transform( west, south)
     x_max, y_max = transformer.transform( east, north)
 
-#precison of 2, considering a nodes area to be 10m
-    x_ccs = round((x_ccs - x_min) / (x_max - x_min),2)
-    y_ccs = round((y_ccs - y_min) / (y_max - y_min),2)
+    #precison of 2, considering a nodes area to be 10m
+    x_ccs = round((x_ccs - x_min) / (x_max - x_min),precision)
+    y_ccs = round((y_ccs - y_min) / (y_max - y_min),precision)
 
     # print(x_ccs,y_ccs,x_min,y_min,x_max,y_max)
     return [ x_ccs, y_ccs]
 
 
-def get_networkx_data_from_coords(file_path, distance=500):
+def get_networkx_data_from_coords(r_file_path, w_file_path, distance, country, precision):
+    
     l_netx_cities = []
     l_city_coord = []
     try:
             
-        with open(file_path, mode='r') as file:
+        with open(r_file_path, mode='r') as file:
             cities_lat_long = csv.reader(file)
             for city in cities_lat_long:
                 l_city_coord.append(city)
         for city in l_city_coord:
             try:
-                lat, long, distance = round(float(city[0]), 5), round(float(city[1]), 5), distance
+                lat, long, distance = round(float(city[0]), precision), round(float(city[1]), precision), distance
             # 1. Obtain the graph from OpenStreetMap
 
                 G = ox.graph_from_point((lat, long), dist=distance, network_type='drive')
@@ -67,6 +218,8 @@ def get_networkx_data_from_coords(file_path, distance=500):
 
                 G = ox.convert.to_undirected(G)
 
+                # project the whole graph
+                G = ox.project_graph(G, to_crs='epsg:3857')
                 # Get the bounding box coordinates
                 bbox = ox.utils_geo.bbox_from_point((lat, long), dist=distance)
                 
@@ -87,7 +240,7 @@ def get_networkx_data_from_coords(file_path, distance=500):
                     if not (bool(node_data['x']) or bool(node_data['y'])):
                         nodes_to_remove.append(node)
                     else:
-                        G.nodes[node]['x'] = get_ccs_of_nodes(node_data['x'], node_data['y'], north, south, east, west) #[ node_data['x'],node_data['y']]
+                        G.nodes[node]['x'] = get_ccs_of_nodes(node_data['x'], node_data['y'], north, south, east, west, precision) #[ node_data['x'],node_data['y']]
                         for key in list(node_data.keys()):
                             if key != 'x':
                                 del node_data[key]
@@ -112,14 +265,14 @@ def get_networkx_data_from_coords(file_path, distance=500):
         
 
     # return l_netx_cities
-    with open("./data/networkx_cities_graph/ccs_cities_graphs.pkl", "wb") as f:
+    with open(w_file_path, "wb") as f:
         pickle.dump(l_netx_cities, f)
     return l_netx_cities
 
 # takes lot of time to get the lat_long so I have written down a csv file
-def write_lat_long(cities):
+def write_lat_long(cities, country):
     lat_long = get_lat_long(cities)
-    file_path = './data/city_lat_long.csv'
+    file_path = f'./data/{country}_cities_lat_long.csv'
     with open(file_path, mode='w', newline='') as file:
         writer = csv.writer(file)
         writer.writerows(lat_long)
@@ -138,8 +291,8 @@ def get_lat_long(cities):
             # return None
     return cities_w_ll
 
-def get_cities_w_pop_gt_100k():
-    df_city_p = pd.read_csv('./data/Germany_cities_pop.csv',delimiter=';'
+def get_cities_w_pop_gt_100k(r_file_path, country):
+    df_city_p = pd.read_csv(r_file_path,delimiter=';'
                             ,encoding='ISO-8859-1',header=None)
     
     #drop other columns, only take the 2023 data

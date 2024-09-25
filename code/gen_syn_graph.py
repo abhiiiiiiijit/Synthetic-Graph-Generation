@@ -20,13 +20,20 @@ from torch_geometric.nn import GAE, VGAE, GCNConv
 import random
 from sklearn.metrics import average_precision_score, roc_auc_score
 import torch.nn.functional as F
-from ae_model import GCNEncoder, GCNEncoder12, GATEncoder, GraphSAGEEncoder
+from ae_model import GCNEncoder, GCNEncoder12, GATEncoder, GraphSAGEEncoder, GCNEncoder2
 
 
 def main():
-  
-    with open("./data/tg_graphs/tg_graphs_all.pkl", "rb") as f:
-        data = pickle.load(f)
+######initialization##################
+    distance = 3000
+    country = "Germany"
+    out_feat_dim = 16
+    pyg_version = 1.2
+    pyg_file_path = f'./data/tg_graphs/{country}_pyg_graphs_d_{distance}_v_{pyg_version}.pkl'
+    encoder_name = "gcn"
+    model_version = 1.3
+
+    write_model = False
 
     if torch.cuda.is_available():
         device = torch.device('cuda')
@@ -39,14 +46,24 @@ def main():
         T.RandomLinkSplit(num_val=0.05, num_test=0.1, is_undirected=True,
                       split_labels=True, add_negative_train_samples=False),
     ])
+##################Load data#########################################################
+    with open(pyg_file_path, "rb") as f:
+        data = pickle.load(f)
+    data.x = data.x.float()
 
     train_data, val_data, test_data = transform(data)   
-    model = torch.load('./code/models/gae_sage_model_v1.pth') #best with samplesize=10 and degree 2
+    model = torch.load(f'./code/models/gae_{encoder_name}_model_v{model_version}.pth')
+    print(pyg_file_path)
+    print(f'./code/models/gae_{encoder_name}_model_v{model_version}.pth')
+    
     # auc, ap = test(test_data, model)
     # print(f' AUC: {auc:.4f}, AP: {ap:.4f}')
-
+##############################################################
     #Graph coordinate positions are saved here
-    data.pos = data.x
+    # if bool(data.pos):
+    #     pass
+    # else:
+    #     data.pos = data.x
     # print(data.x[0:3])
 
     model.eval()
@@ -55,7 +72,7 @@ def main():
     # print(z.size()[0])
 
     no_nodes = z.size(0)
-    sample_size = 100
+    sample_size = 200
     sampled_indices = random.sample(range(no_nodes), sample_size)
 
     # z_sampled_nodes = z[sampled_indices]
@@ -65,32 +82,7 @@ def main():
     # print(new_pyg_graph.edge_index)
 
     visualise_graph(new_pyg_graph)
-
-    # print(data.x[n])
-    # print(threshold)
-    # print(A_prob)
-    # print(pred_edges)
-    # # print(data.x[0:5])
-    # print(len(test_data.x))
-    # #test the saved model
-    # model = torch.load('./code/models/gae_model_v1.pth')
-    # edge_index = test_data.pos_edge_label_index
-    # model.eval()
-    # z = model.encode(test_data.x, test_data.edge_index)
-    # value = (z[edge_index[0]] * z[edge_index[1]]).sum(dim=1)
-    # value = torch.sigmoid(value)
-    # adj = torch.matmul(z, z.t())
-    
-    # adj = torch.sigmoid(adj)
-    # pred = adj.detach().cpu().numpy()
-    # pos_y = z.new_ones(test_data.pos_edge_label_index.size(1))
-    # neg_y = z.new_zeros(test_data.neg_edge_label_index.size(1))
-    # y = torch.cat([pos_y, neg_y], dim=0)
-    # y = y.detach().cpu().numpy()
-
-    # print(len(y),len(pred))
-    # # edge_index = model.decode(z)
-    # print(roc_auc_score(y, pred, multi_class='ovo'))
+#####################################################
 
 
 def visualise_graph(data):
@@ -99,7 +91,7 @@ def visualise_graph(data):
 
     # Visualize the graph
     plt.figure(figsize=(8, 8))
-    nx.draw(G, pos=data.pos, with_labels=True, node_color='lightblue', edge_color='gray', node_size=500, font_size=16)
+    nx.draw(G, pos=data.pos, with_labels=True, node_color='lightblue', edge_color='gray', node_size=50, font_size=5)
     plt.show()
 
 def replace_top_x_with_1_ignore_diag(mat, x):
@@ -200,3 +192,30 @@ def test(data, model):
 
 if __name__ == "__main__":
     main()
+
+
+    # print(data.x[n])
+    # print(threshold)
+    # print(A_prob)
+    # print(pred_edges)
+    # # print(data.x[0:5])
+    # print(len(test_data.x))
+    # #test the saved model
+    # model = torch.load('./code/models/gae_model_v1.pth')
+    # edge_index = test_data.pos_edge_label_index
+    # model.eval()
+    # z = model.encode(test_data.x, test_data.edge_index)
+    # value = (z[edge_index[0]] * z[edge_index[1]]).sum(dim=1)
+    # value = torch.sigmoid(value)
+    # adj = torch.matmul(z, z.t())
+    
+    # adj = torch.sigmoid(adj)
+    # pred = adj.detach().cpu().numpy()
+    # pos_y = z.new_ones(test_data.pos_edge_label_index.size(1))
+    # neg_y = z.new_zeros(test_data.neg_edge_label_index.size(1))
+    # y = torch.cat([pos_y, neg_y], dim=0)
+    # y = y.detach().cpu().numpy()
+
+    # print(len(y),len(pred))
+    # # edge_index = model.decode(z)
+    # print(roc_auc_score(y, pred, multi_class='ovo'))

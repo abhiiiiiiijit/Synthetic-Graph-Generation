@@ -122,7 +122,7 @@ def main():
     print(f"Median time per epoch: {torch.tensor(times).median():.4f}s")
 ###################################################
     # save the model
-    torch.save(model, './code/models/vgae_model_v1.pth') # Epoch: 200, AUC: 0.8713, AP: 0.8252
+    # torch.save(model, './code/models/vgae_model_v1.pth') # Epoch: 200, AUC: 0.8713, AP: 0.8252
 
 #####################################################
 
