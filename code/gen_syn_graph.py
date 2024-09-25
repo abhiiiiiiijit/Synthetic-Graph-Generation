@@ -30,7 +30,7 @@ def main():
     out_feat_dim = 16
     pyg_version = 1.2
     pyg_file_path = f'./data/tg_graphs/{country}_pyg_graphs_d_{distance}_v_{pyg_version}.pkl'
-    encoder_name = "sage"
+    encoder_name = "gat"
     model_version = 1.3
 
     write_model = False
