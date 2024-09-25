@@ -31,7 +31,7 @@ def main():
     out_feat_dim = 64
     pyg_version = 1.2
     pyg_file_path = f'./data/tg_graphs/{country}_pyg_graphs_d_{distance}_v_{pyg_version}.pkl'
-    encoder_name = "gcn"
+    encoder_name = "sage"
     model_version = 1.3
     write_model = True
 
@@ -82,7 +82,7 @@ def main():
         model = GAE(GCNEncoder2(input_dim=in_channels, hidden_dim=64, latent_dim=32))    
     elif encoder_name == "gat":
         model = GAE(GATEncoder())
-    elif encoder_name == "sage":
+    elif encoder_name == "sage" and model_version == 1.3:
         model = GAE(GraphSAGEEncoder())
 
     model = model.to(device)
@@ -242,7 +242,7 @@ class GATEncoder(torch.nn.Module):
         return x
 
 class GraphSAGEEncoder(torch.nn.Module):
-    def __init__(self, input_dim=2, hidden_dim=16, output_dim=64, num_layers=3):
+    def __init__(self, input_dim=3, hidden_dim=64, output_dim=32, num_layers=3):
         super(GraphSAGEEncoder, self).__init__()
         
         self.num_layers = num_layers
