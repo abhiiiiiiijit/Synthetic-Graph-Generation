@@ -25,14 +25,14 @@ def main():
     is_variational = False
     is_linear = False
     iteration = 200
-    distance = 3000
+    distance = 1000
     precision = 6
     country = "Germany"
     out_feat_dim = 64
-    pyg_version = 1.2
+    pyg_version = 2
     pyg_file_path = f'./data/tg_graphs/{country}_pyg_graphs_d_{distance}_v_{pyg_version}.pkl'
     encoder_name = "gat"
-    model_version = 1.3
+    model_version = 2
     write_model = True
 
     if torch.cuda.is_available():

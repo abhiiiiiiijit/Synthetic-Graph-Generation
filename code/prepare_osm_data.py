@@ -15,15 +15,15 @@ import numpy as np
 # cd let do it, need to import
 
 def main():
-    write_networkx_graph = True
+    write_networkx_graph = False
     write_ll = False
     # normalise_coordinate = False
     write_pyg_graph = True
     distance = 3000
-    precision = 6
+    precision = 4
     country = "Germany"
     base_file_path = "./data/"
-    pyg_version = 1.2 # 1= wo_edge 2= w_edge # 1.2 nodefeat+edgefeat
+    pyg_version = 2 # 1= wo_edge 2= w_edge # 1.2 nodefeat+edgefeat
 ##### city name list >>>>>>>>>> lat long
     #get or write Longitude Latitude
     r_city_pop_file_path = base_file_path+ country + '_cities_pop.csv'
