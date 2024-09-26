@@ -20,18 +20,18 @@ from torch_geometric.nn import GAE, VGAE, GCNConv
 import random
 from sklearn.metrics import average_precision_score, roc_auc_score
 import torch.nn.functional as F
-from ae_model import GCNEncoder, GCNEncoder12, GATEncoder, GraphSAGEEncoder, GCNEncoder2
+from ae_model import GCNEncoder, GCNEncoder12, GATEncoder,GATEncoder2, GraphSAGEEncoder, GCNEncoder2
 
 
 def main():
 ######initialization##################
-    distance = 3000
+    distance = 2000
     country = "Germany"
     out_feat_dim = 16
-    pyg_version = 1.2
+    pyg_version = 2
     pyg_file_path = f'./data/tg_graphs/{country}_pyg_graphs_d_{distance}_v_{pyg_version}.pkl'
     encoder_name = "gat"
-    model_version = 1.3
+    model_version = 2.2
 
     write_model = False
 
@@ -51,7 +51,7 @@ def main():
         data = pickle.load(f)
     data.x = data.x.float()
 
-    train_data, val_data, test_data = transform(data)   
+    # train_data, val_data, test_data = transform(data)   
     model = torch.load(f'./code/models/gae_{encoder_name}_model_v{model_version}.pth')
     print(pyg_file_path)
     print(f'./code/models/gae_{encoder_name}_model_v{model_version}.pth')
@@ -65,9 +65,12 @@ def main():
     # else:
     #     data.pos = data.x
     # print(data.x[0:3])
-
+    data.pos = data.x
     model.eval()
-    z = model.encode(data.x, data.edge_index)
+    if model_version>=2 and encoder_name =="gat":
+        z = model.encode(data.x, data.edge_index,data.edge_attr)
+    else:
+        z = model.encode(data.x, data.edge_index)
 
     # print(z.size()[0])
 
@@ -135,7 +138,7 @@ def gen_new_pyg_graph(z, data, sampled_indices):
 
     # A_prob = torch.triu(A_prob)
 
-    A_pred = replace_top_x_with_1_ignore_diag(A_prob, 2)
+    A_pred = replace_top_x_with_1_ignore_diag(A_prob, 3)
 
     # pred_edges = from_scipy_sparse_matrix(A_pred)
 

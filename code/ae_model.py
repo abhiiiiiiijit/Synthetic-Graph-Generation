@@ -25,14 +25,14 @@ def main():
     is_variational = False
     is_linear = False
     iteration = 200
-    distance = 1000
-    precision = 6
+    distance = 2000
+    precision = 4
     country = "Germany"
     out_feat_dim = 64
     pyg_version = 2
     pyg_file_path = f'./data/tg_graphs/{country}_pyg_graphs_d_{distance}_v_{pyg_version}.pkl'
     encoder_name = "gat"
-    model_version = 2
+    model_version = 2.2
     write_model = True
 
     if torch.cuda.is_available():
@@ -83,6 +83,9 @@ def main():
     elif encoder_name == "gat"and model_version == 1.3:
         print("training started gat 1.3")
         model = GAE(GATEncoder())
+    elif encoder_name == "gat"and model_version >= 2:
+        print(f"training started gat {model_version}")
+        model = GAE(GATEncoder2())
     elif encoder_name == "sage" and model_version == 1.3:
         model = GAE(GraphSAGEEncoder())
 
@@ -95,8 +98,8 @@ def main():
         # train_loss = train(model, optimizer, train_data, loss_fn)  # Train on the training data
         # test_loss = test(test_data, model, loss_fn )  # Test on the test data
         # print(f'Epoch {epoch}, Train Loss: {train_loss:.4f}, Test Loss: {test_loss:.4f}')
-        loss = train(model, optimizer, train_data, is_variational)
-        auc, ap = test(test_data, model)
+        loss = train(model, optimizer, train_data, is_variational,model_version, encoder_name)
+        auc, ap = test(test_data, model,model_version, encoder_name)
         print(f'Epoch: {epoch:03d}, AUC: {auc:.4f}, AP: {ap:.4f}')
         times.append(time.time() - start)
     print(f"Median time per epoch: {torch.tensor(times).median():.4f}s")
@@ -212,8 +215,38 @@ class GCNEncoder2(torch.nn.Module):
         
         return x
 
+class GATEncoder2(torch.nn.Module):
+    def __init__(self, input_dim=2, hidden_dim=64, output_dim=32, num_layers=3, heads=3):
+        super(GATEncoder2, self).__init__()
+        
+        self.num_layers = num_layers
+        
+        # First GAT layer
+        self.gats = torch.nn.ModuleList()
+        self.gats.append(GATConv(input_dim, hidden_dim, heads=heads, concat=True,edge_dim=1))
+        
+        # Additional GAT layers
+        for _ in range(num_layers - 2):
+            self.gats.append(GATConv(hidden_dim * heads, hidden_dim, heads=heads, concat=True, edge_dim=1))
+        
+        # Final GAT layer (concatenation of heads disabled)
+        self.gats.append(GATConv(hidden_dim * heads, output_dim, heads=1, concat=False, edge_dim=1))
+        
+        self.dropout = torch.nn.Dropout(p=0.5)
+    
+    def forward(self, x, edge_index,edge_attr):
+        # Pass through each GAT layer with LeakyReLU activation
+        for i in range(self.num_layers - 1):
+            x = F.leaky_relu(self.gats[i](x, edge_index, edge_attr))
+            x = self.dropout(x)
+        
+        # The final layer
+        x = self.gats[-1](x, edge_index, edge_attr)
+        
+        return x
+
 class GATEncoder(torch.nn.Module):
-    def __init__(self, input_dim=3, hidden_dim=64, output_dim=32, num_layers=3, heads=4):
+    def __init__(self, input_dim=3, hidden_dim=64, output_dim=32, num_layers=3, heads=3):
         super(GATEncoder, self).__init__()
         
         self.num_layers = num_layers
@@ -304,10 +337,13 @@ class GraphSAGEEncoder(torch.nn.Module):
     
 #     return loss.item()
 
-def train(model, optimizer, train_data, is_variational):
+def train(model, optimizer, train_data, is_variational,model_version, encoder_name):
     model.train()
     optimizer.zero_grad()
-    z = model.encode(train_data.x, train_data.edge_index)
+    if model_version>=2 and encoder_name =="gat":
+        z = model.encode(train_data.x, train_data.edge_index,train_data.edge_attr)
+    else:
+        z = model.encode(train_data.x, train_data.edge_index)
     loss = model.recon_loss(z, train_data.pos_edge_label_index)
     # print(len(z))
     # dc = torch.sigmoid( model.decode(z,train_data.edge_index))
@@ -321,9 +357,12 @@ def train(model, optimizer, train_data, is_variational):
 
 
 @torch.no_grad()
-def test(data, model):
+def test(data, model,model_version, encoder_name):
     model.eval()
-    z = model.encode(data.x, data.edge_index)
+    if model_version>=2 and encoder_name =="gat":
+        z = model.encode(data.x, data.edge_index,data.edge_attr)
+    else:
+        z = model.encode(data.x, data.edge_index)
     # print(z)
     return model.test(z, data.pos_edge_label_index, data.neg_edge_label_index)
 
