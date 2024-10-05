@@ -18,8 +18,8 @@ def main():
     write_networkx_graph = False
     write_ll = False
     # normalise_coordinate = False
-    write_pyg_graph = True
-    distance = 3000
+    write_pyg_graph = False
+    distance = 1000
     precision = 4
     country = "Germany"
     base_file_path = "./data/"
@@ -53,7 +53,7 @@ def main():
         with open(w_city_nx_file_path, "rb") as f:
             l_netx_cities = pickle.load(f)
         # print(l_netx_cities[0].nodes(data=True))
-        # print(l_netx_cities[0].edges(data=True))
+        print(l_netx_cities[0].edges(data=True))
         if bool(l_netx_cities):
              print(f"networkx graphs section of {country} cities is working fine")
         else:
