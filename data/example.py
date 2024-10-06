@@ -7,7 +7,7 @@ place_name = "Trier, Germany"
 city_center = ox.geocoder.geocode(place_name)  # Get the lat/lon of city center
 
 # Define the network type and distance window (1000 meters)
-network_type = 'walk'  # Can be 'drive', 'walk', etc.
+network_type = 'all'  # Can be 'drive', 'walk', etc.
 distance = 1000  # Meters from the city center
 
 # Get the street network within 1000 meters from the city center
@@ -18,7 +18,7 @@ fig, ax = ox.plot_graph(
     G, 
     bgcolor='white',       # Set background color to white
     node_color='black',    # Set node color to black
-    node_size=0,           # Set node size to 0 to hide them
+    node_size=5,           # Set node size to 0 to hide them
     edge_color='black',    # Set edge color to black
     edge_linewidth=0.5,    # Adjust edge line width
     show=False,            # Prevent automatic display

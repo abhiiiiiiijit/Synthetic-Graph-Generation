@@ -52,8 +52,9 @@ def main():
     else:
         with open(w_city_nx_file_path, "rb") as f:
             l_netx_cities = pickle.load(f)
+        print(len(l_netx_cities))
         # print(l_netx_cities[0].nodes(data=True))
-        print(l_netx_cities[0].edges(data=True))
+        # print(l_netx_cities[0].edges(data=True))
         if bool(l_netx_cities):
              print(f"networkx graphs section of {country} cities is working fine")
         else:
@@ -77,7 +78,8 @@ def main():
     else:
         with open(w_city_pyg_file_path, "rb") as f:
             pyg_data = pickle.load(f)
-        print(pyg_data.x)
+        print(w_city_pyg_file_path)
+        print(pyg_data.num_nodes, pyg_data.num_edges)
         # print(l_netx_cities[0].edges(data=True))
         if bool(pyg_data):
              print(f"pyg graphs {pyg_version} section of {country} cities is working fine")
