@@ -28,12 +28,14 @@ def main():
     distance = 2000
     precision = 4
     country = "Germany"
-    out_feat_dim = 64
+    out_feat_dim = 32
     pyg_version = 2
     pyg_file_path = f'./data/tg_graphs/{country}_pyg_graphs_d_{distance}_v_{pyg_version}.pkl'
     encoder_name = "gat"
     model_version = 2.2
-    write_model = True
+    gnn_training_plot_path = f'./result/gnn_training/model_{encoder_name}_version_{model_version}_pyg_data_distance_{distance}.png'
+    visualise_training_graph = True
+    write_model = False
 
     if torch.cuda.is_available():
         device = torch.device('cuda')
@@ -46,7 +48,7 @@ def main():
     transform = T.Compose([
         # T.NormalizeFeatures(),
         T.ToDevice(device),
-        T.RandomLinkSplit(num_val=0.0, num_test=0.2, is_undirected=False,
+        T.RandomLinkSplit(num_val=0.2, num_test=0.1, is_undirected=False,
                       split_labels=True, add_negative_train_samples=False),
     ])
 
@@ -86,24 +88,33 @@ def main():
     elif encoder_name == "gat"and model_version >= 2:
         print(f"training started gat {model_version}")
         model = GAE(GATEncoder2())
-    elif encoder_name == "sage" and model_version == 1.3:
+    elif encoder_name == "sage" and model_version == 1.2:
         model = GAE(GraphSAGEEncoder())
 
     model = model.to(device)
     optimizer = torch.optim.Adam(model.parameters(), lr=0.01)
     loss_fn = torch.nn.MSELoss()
     times = []
+    auc_values =[]
+    ap_values = []
     for epoch in range(1, iteration + 1):
         start = time.time()
         # train_loss = train(model, optimizer, train_data, loss_fn)  # Train on the training data
         # test_loss = test(test_data, model, loss_fn )  # Test on the test data
         # print(f'Epoch {epoch}, Train Loss: {train_loss:.4f}, Test Loss: {test_loss:.4f}')
         loss = train(model, optimizer, train_data, is_variational,model_version, encoder_name)
-        auc, ap = test(test_data, model,model_version, encoder_name)
+        auc, ap = test(val_data, model,model_version, encoder_name)
+        auc_values.append(auc)
+        ap_values.append(ap)
         print(f'Epoch: {epoch:03d}, AUC: {auc:.4f}, AP: {ap:.4f}')
         times.append(time.time() - start)
     print(f"Median time per epoch: {torch.tensor(times).median():.4f}s")
     print(f'./data/tg_graphs/{country}_pyg_graphs_d_{distance}_v_{pyg_version}.pkl')
+    # 10% unseen data
+    auc, ap = test(test_data, model,model_version, encoder_name)
+    auc = round(auc,4)
+    ap = round(ap,4)
+    print(f"Test Data Performance of {encoder_name}-{model_version}-distance{distance}: AUC = {auc} AP = {ap}")
 ###################################################
     # save the model
     if write_model:
@@ -114,6 +125,42 @@ def main():
         if bool(model):
             print(f"GAE model {encoder_name} v {model_version} loads sucessfully")
 #####################################################
+    #visualise training auc and ap
+    if visualise_training_graph:
+        epochs = list(range(1, iteration + 1)) 
+        # Plotting
+        plt.figure(figsize=(10, 6))
+        plt.plot(epochs, auc_values, label="AUC", color='b', linestyle='-')
+        plt.plot(epochs, ap_values, label="AP", color='g', linestyle='-')
+
+        # Adding labels and title
+        plt.xlabel('Epoch')
+        plt.ylabel('Score')
+        plt.title(f'Final model performance after training AUC: {auc} and AP: {ap} for 10% unseen test data.')
+
+        # Adding legend
+        plt.legend()
+        # Set y-axis limit
+        plt.ylim(0, 1)
+
+        # Set x-axis grid division to 1 unit
+        plt.xticks(ticks=range(1, iteration + 1, iteration//10))  # Set x-ticks with step of 1
+
+        # # Enable grid with customized divisions
+        # plt.grid(True, which='both', axis='x', linestyle='--')  # Grid on x-axis only
+        # plt.grid(True, which='both', axis='y', linestyle='--')  # Grid on y-axis    
+
+        # Save the plot as PNG in the 'result/' directory
+
+        plt.savefig(gnn_training_plot_path, format='png', dpi=500)
+
+        # Show the plot
+        plt.grid(True)
+        plt.show()
+    else:
+        pass
+#############################################################################################
+
 
 class GCNEncoder(torch.nn.Module):
     def __init__(self, in_channels, out_channels):
