@@ -29,11 +29,14 @@ def main():
     country = "Germany"
     out_feat_dim = 16
     pyg_version = 2
+    sample_size = 300
     pyg_file_path = f'./data/tg_graphs/{country}_pyg_graphs_d_{distance}_v_{pyg_version}.pkl'
     encoder_name = "gat"
     model_version = 2.2
-
-    write_model = False
+    save_no_modification_new_syn_network = True
+    save_new_syn_network_not_visualise_saved = True
+    # get_new_pyg_graph_and_visualise = True
+    new_syn_pyg_data_n_plot_path = f'./result/new_syn_street_network/new_syn_street_net_{encoder_name}_version_{model_version}_sample_{sample_size}'
 
     if torch.cuda.is_available():
         device = torch.device('cuda')
@@ -46,56 +49,72 @@ def main():
         T.RandomLinkSplit(num_val=0.05, num_test=0.1, is_undirected=True,
                       split_labels=True, add_negative_train_samples=False),
     ])
-##################Load data#########################################################
-    with open(pyg_file_path, "rb") as f:
-        data = pickle.load(f)
-    data.x = data.x.float()
-
-    # train_data, val_data, test_data = transform(data)   
-    model = torch.load(f'./code/models/gae_{encoder_name}_model_v{model_version}.pth')
-    print(pyg_file_path)
-    print(f'./code/models/gae_{encoder_name}_model_v{model_version}.pth')
-    
-    # auc, ap = test(test_data, model)
-    # print(f' AUC: {auc:.4f}, AP: {ap:.4f}')
-##############################################################
-    #Graph coordinate positions are saved here
-    # if bool(data.pos):
-    #     pass
-    # else:
-    #     data.pos = data.x
-    # print(data.x[0:3])
-    data.pos = data.x
-    model.eval()
-    if model_version>=2 and encoder_name =="gat":
-        z = model.encode(data.x, data.edge_index,data.edge_attr)
-    else:
-        z = model.encode(data.x, data.edge_index)
-
-    # print(z.size()[0])
-
-    no_nodes = z.size(0)
-    sample_size = 200
-    sampled_indices = random.sample(range(no_nodes), sample_size)
 
     # z_sampled_nodes = z[sampled_indices]
+    if save_new_syn_network_not_visualise_saved:
+            ##################Load data#########################################################
+        with open(pyg_file_path, "rb") as f:
+            data = pickle.load(f)
+        data.x = data.x.float()
 
-    new_pyg_graph = gen_new_pyg_graph(z, data, sampled_indices)
+        # train_data, val_data, test_data = transform(data)   
+        model = torch.load(f'./code/models/gae_{encoder_name}_model_v{model_version}.pth')
+        print(pyg_file_path)
+        print(f'./code/models/gae_{encoder_name}_model_v{model_version}.pth')
+        
+        # auc, ap = test(test_data, model)
+        # print(f' AUC: {auc:.4f}, AP: {ap:.4f}')
+    ##############################################################
+        #Graph coordinate positions are saved here
+        # if bool(data.pos):
+        #     pass
+        # else:
+        #     data.pos = data.x
+        # print(data.x[0:3])
+        if pyg_version==2:
+            data.pos = data.x
+        model.eval()
+        if model_version>=2 and encoder_name =="gat":
+            z = model.encode(data.x, data.edge_index,data.edge_attr)
+        else:
+            z = model.encode(data.x, data.edge_index)
 
+        # print(z.size()[0])
+
+        no_nodes = z.size(0)
+
+        sampled_indices = random.sample(range(no_nodes), sample_size)
+        if save_no_modification_new_syn_network:
+            not_mod_new_pyg_graph = gen_new_pyg_graph(z, data, sampled_indices,save_no_modification_new_syn_network)
+            new_pyg_graph = gen_new_pyg_graph(z, data, sampled_indices,False)
+        
+        visualise_graph(not_mod_new_pyg_graph, save_new_syn_network_not_visualise_saved, new_syn_pyg_data_n_plot_path+'_not_mod', False)
+        visualise_graph(new_pyg_graph, save_new_syn_network_not_visualise_saved, new_syn_pyg_data_n_plot_path, False)
+    else:
+        with open(new_syn_pyg_data_n_plot_path+'.pkl', "rb") as f:
+            new_pyg_graph = pickle.load(f)
+        visualise_graph(new_pyg_graph, save_new_syn_network_not_visualise_saved, new_syn_pyg_data_n_plot_path,True)
     # print(new_pyg_graph.edge_index)
 
-    visualise_graph(new_pyg_graph)
+    
 #####################################################
 
 
-def visualise_graph(data):
-    # Convert the PyG Data object to a NetworkX graph
+def visualise_graph(data, save_new_syn_network, new_syn_pyg_data_n_plot_path, show_plot):
+    # Convert the PyG Data object to a NetworkX graph 
     G = to_networkx(data,  to_undirected=True)
-
     # Visualize the graph
-    plt.figure(figsize=(8, 8))
-    nx.draw(G, pos=data.pos, with_labels=True, node_color='lightblue', edge_color='gray', node_size=50, font_size=5)
-    plt.show()
+    plt.figure(figsize=(10, 8))
+    nx.draw(G, pos=data.pos, with_labels=False, node_color='blue', edge_color='black', node_size=50, font_size=5)
+    if save_new_syn_network:
+        with open(new_syn_pyg_data_n_plot_path+'.pkl', "wb") as f:
+            pickle.dump(data, f)
+        plt.savefig(new_syn_pyg_data_n_plot_path+'.png', format='png', dpi=500)
+
+    # Show the plot
+    # plt.grid(True)
+    if show_plot:
+        plt.show()
 
 def replace_top_x_with_1_ignore_diag(mat, x):
     # Clone the original matrix to avoid in-place modifications
@@ -124,21 +143,23 @@ def create_dist_matrix(coords):
     dist_matrix = torch.sqrt(torch.sum(diffs**2, dim=-1))
     return dist_matrix
 
-def gen_new_pyg_graph(z, data, sampled_indices):
+def gen_new_pyg_graph(z, data, sampled_indices,save_no_modification_new_syn_network):
     z_sampled_nodes = z[sampled_indices]
     x = data.x[sampled_indices]
     A_prob = torch.sigmoid(torch.matmul(z_sampled_nodes, z_sampled_nodes.t()))
 
-    # threshold = 0.5 #A_prob.mean().item()
-    # A_pred = (A_prob > threshold).int()
+    if save_no_modification_new_syn_network:
+        threshold = 0.7 #A_prob.mean().item()
+        A_pred = (A_prob > threshold).int()
+    else:
 
-    A_dist = create_dist_matrix(x)
+        A_dist = create_dist_matrix(x)
 
-    A_prob = A_prob -  A_dist
+        A_prob = A_prob -  A_dist
 
-    # A_prob = torch.triu(A_prob)
+        # A_prob = torch.triu(A_prob)
 
-    A_pred = replace_top_x_with_1_ignore_diag(A_prob, 3)
+        A_pred = replace_top_x_with_1_ignore_diag(A_prob, 3)
 
     # pred_edges = from_scipy_sparse_matrix(A_pred)
 
@@ -161,15 +182,6 @@ def gen_new_pyg_graph(z, data, sampled_indices):
     return new_graph
 
 
-# class GCNEncoder(torch.nn.Module):
-#     def __init__(self, in_channels, out_channels):
-#         super().__init__()
-#         self.conv1 = GCNConv(in_channels, 2 * out_channels)
-#         self.conv2 = GCNConv(2 * out_channels, out_channels)
-
-#     def forward(self, x, edge_index):
-#         x = self.conv1(x, edge_index).relu()
-#         return self.conv2(x, edge_index)
 
 @torch.no_grad()
 def test(data, model):
